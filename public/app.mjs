@@ -1,9 +1,9 @@
-import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=1.5.0';
-import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,rivalsFor,stageFor,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=1.5.0';
-import {icon,petArt,weaponArt} from './art.mjs?v=1.5.0';
-import {playCombatMotion} from './combat-motion.mjs?v=1.5.0';
-import {handArt} from './fighter-rig.mjs?v=1.5.0';
-import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=1.5.0';
+import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=1.5.1';
+import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,rivalsFor,stageFor,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=1.5.1';
+import {icon,petArt,weaponArt} from './art.mjs?v=1.5.1';
+import {playCombatMotion} from './combat-motion.mjs?v=1.5.1';
+import {handArt} from './fighter-rig.mjs?v=1.5.1';
+import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=1.5.1';
 const STORE='pet-brawl-jianghu-v1';
 const root=document.querySelector('#app'),modalRoot=document.querySelector('#modal-root'),toastEl=document.querySelector('#toast');
 let state=freshState(),loadError=false;

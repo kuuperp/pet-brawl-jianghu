@@ -25,7 +25,7 @@ test('Actual controller completes fights, blocks mid-fight edits, trains, claims
  function advance(ms){const end=clock+ms;let guard=0;while(true){const next=[...timers].filter(([,t])=>t.due<=end).sort((a,b)=>a[1].due-b[1].due)[0];if(!next)break;assert.ok(guard++<5000);timers.delete(next[0]);clock=next[1].due;next[1].fn();}clock=end;}
  function resolveResult(){for(const[id,t]of [...timers])if(t.ms===500){timers.delete(id);t.fn();}}
  try{
-  if(process.env.PET_BRAWL_OFFLINE_PREVIEW){const html=readFileSync(new URL('../review/pet-brawl-v1.5.0-click-fixed.html',import.meta.url),'utf8'),code=html.match(/<script id="preview-app">([\s\S]*?)<\/script>/)[1];new Script(code).runInThisContext();}else await import('../public/app.mjs');assert.equal(current().battles,0);
+  if(process.env.PET_BRAWL_OFFLINE_PREVIEW){const html=readFileSync(new URL('../review/pet-brawl-v1.5.0-click-fixed.html',import.meta.url),'utf8'),code=html.match(/<script id="preview-app">([\s\S]*?)<\/script>/)[1];new Script(code).runInThisContext();}else await import('../public/app.mjs');assert.equal(current().battles,0);assert.ok(nodes.get('app').innerHTML.includes('CDK 兑换'),'CDK entry is directly visible on the home page');
   assert.equal(current().settings.motion,'full');click('motion');assert.equal(current().settings.motion,'reduced');click('motion');assert.equal(current().settings.motion,'full');
   click('start');assert.ok(nodes.get('app').innerHTML.includes('in-battle'));
   click('nav','training');assert.ok(nodes.get('app').innerHTML.includes('in-battle'));

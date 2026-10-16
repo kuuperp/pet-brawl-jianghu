@@ -1,6 +1,6 @@
-import {RELIC,relicActive} from './relics.mjs?v=1.5.0';
-import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=1.5.0';
-import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=1.5.0';
+import {RELIC,relicActive} from './relics.mjs?v=1.5.1';
+import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=1.5.1';
+import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=1.5.1';
 export {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL};
 export const VERSION=1;
 export const HEALTH_SCALE=3.2;
