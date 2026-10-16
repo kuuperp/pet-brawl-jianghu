@@ -2,6 +2,16 @@
 
 静态网页游戏的发布文件。无需数据库、后端服务器或运行时密钥。
 
+## 当前发布
+
+- 游戏地址：https://pet-brawl-jianghu.onrender.com
+- Render 工作区：My Workspace
+- 服务 ID：`srv-db8ouiei0phs738gebig`
+- 部署 ID：`dep-db8ouiui0phs738gecgg`
+- 已发布游戏提交：`6c326ea64c051a39e2dd09b63fb38462ad24b3fd`
+- 自动部署已关闭，后续更新需要手动发布。
+- 中国大陆网络可达性仍待实际网络测试；不要仅凭部署成功判定。
+
 ## Render
 
 - 服务类型：Static Site。
