@@ -1,0 +1,52 @@
+services:
+  - type: web
+    runtime: static
+    name: pet-brawl-jianghu
+    buildCommand: test -f public/index.html && test -f public/app.mjs
+    staticPublishPath: public
+    envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /app.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /art.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /campaign-view.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /campaign.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /combat-motion.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /combat-sequence.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /engine.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /expansion.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /fighter-rig.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /motion-clock.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /views.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /weapon-illustrations.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
