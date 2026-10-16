@@ -21,11 +21,11 @@ test('Actual controller completes fights, blocks mid-fight edits, trains, claims
  globalThis.setTimeout=(fn,ms)=>{timers.set(++timerId,{fn,ms,due:clock+ms});return timerId;};globalThis.clearTimeout=id=>timers.delete(id);
  globalThis.performance={now:()=>clock};globalThis.requestAnimationFrame=fn=>setTimeout(()=>fn(clock),1000/60);globalThis.cancelAnimationFrame=id=>clearTimeout(id);
  const current=()=>JSON.parse(storage.get('pet-brawl-jianghu-v1'));
- function click(action,value,stale=false){const html=nodes.get('app').innerHTML+nodes.get('modal-root').innerHTML;if(!stale){const tag=[...html.matchAll(/<(?:button|a)\b[^>]*>/g)].map(m=>m[0]).find(t=>t.includes(`data-action="${action}"`)&&(value===undefined||t.includes(`data-value="${value}"`)));assert.ok(tag,`Button exists: ${action} ${value??''}`);assert.ok(!/\bdisabled\b/.test(tag),`Button enabled: ${action}`);}const target={dataset:{action,value},disabled:false,closest(){return this;}};listeners.click({target,preventDefault(){}});}
+ function click(action,value,stale=false){const html=nodes.get('app').innerHTML+nodes.get('modal-root').innerHTML;if(!stale){const tag=[...html.matchAll(/<(?:button|a)\b[^>]*>/g)].map(m=>m[0]).find(t=>t.includes(`data-action="${action}"`)&&(value===undefined||t.includes(`data-value="${value}"`)));assert.ok(tag,`Button exists: ${action} ${value??''}`);assert.ok(!/\bdisabled\b/.test(tag),`Button enabled: ${action}`);}const target={dataset:{action,value},disabled:false,closest(){return this;}};return listeners.click({target,preventDefault(){}});}
  function advance(ms){const end=clock+ms;let guard=0;while(true){const next=[...timers].filter(([,t])=>t.due<=end).sort((a,b)=>a[1].due-b[1].due)[0];if(!next)break;assert.ok(guard++<5000);timers.delete(next[0]);clock=next[1].due;next[1].fn();}clock=end;}
  function resolveResult(){for(const[id,t]of [...timers])if(t.ms===500){timers.delete(id);t.fn();}}
  try{
-  if(process.env.PET_BRAWL_OFFLINE_PREVIEW){const html=readFileSync(new URL('../review/pet-brawl-v1.5.0-cdk-fixed.html',import.meta.url),'utf8'),code=html.match(/<script id="preview-app">([\s\S]*?)<\/script>/)[1];new Script(code).runInThisContext();}else await import('../public/app.mjs');assert.equal(current().battles,0);
+  if(process.env.PET_BRAWL_OFFLINE_PREVIEW){const html=readFileSync(new URL('../review/pet-brawl-v1.5.0-click-fixed.html',import.meta.url),'utf8'),code=html.match(/<script id="preview-app">([\s\S]*?)<\/script>/)[1];new Script(code).runInThisContext();}else await import('../public/app.mjs');assert.equal(current().battles,0);
   assert.equal(current().settings.motion,'full');click('motion');assert.equal(current().settings.motion,'reduced');click('motion');assert.equal(current().settings.motion,'full');
   click('start');assert.ok(nodes.get('app').innerHTML.includes('in-battle'));
   click('nav','training');assert.ok(nodes.get('app').innerHTML.includes('in-battle'));
@@ -46,15 +46,17 @@ test('Actual controller completes fights, blocks mid-fight edits, trains, claims
   click('nav','tower');click('select-chapter','4');assert.ok(nodes.get('app').innerHTML.includes('天下擂台'));click('select-stage','200');assert.ok(nodes.get('app').innerHTML.includes('归元乐斗盟主'));const priorBattles=current().battles;click('challenge-stage','200',true);assert.equal(current().battles,priorBattles);assert.ok(!nodes.get('app').innerHTML.includes('in-battle'));
   const late={...current(),stage:200,level:80,training:{hp:60,atk:60,def:60,agi:60}};nodes.get('import-file').files=[{size:1600,text:async()=>JSON.stringify(late)}];await nodes.get('import-file').change({target:nodes.get('import-file')});click('confirm-import');click('nav','tower');click('challenge-stage','200');assert.ok(nodes.get('app').innerHTML.includes('章节大 Boss'));click('skip');resolveResult();click('close');
   click('settings');click('cdk');assert.ok(nodes.get('modal-root').innerHTML.includes('仅在装备时生效'));
-  nodes.get('cdk-input').value='BAD-CODE';await listeners.submit({target:{id:'cdk-form'},preventDefault(){}});
+  assert.ok(nodes.get('modal-root').innerHTML.includes('type="button" data-action="redeem-cdk"'));assert.ok(!nodes.get('modal-root').innerHTML.includes('<form'));
+  await click('redeem-cdk');assert.match(nodes.get('cdk-status').textContent,/请输入有效/);
+  nodes.get('cdk-input').value='BAD-CODE';await click('redeem-cdk');
   assert.deepEqual(current().cdkClaims,[]);assert.match(nodes.get('cdk-status').textContent,/不正确/);
   if(process.env.CDK_TEST_CODE){
-   nodes.get('cdk-input').value=process.env.CDK_TEST_CODE.toLowerCase();await listeners.submit({target:{id:'cdk-form'},preventDefault(){}});
-   assert.deepEqual(current().cdkClaims,['wuji-seal']);assert.equal(current().relicEquipped,true);assert.ok(nodes.get('modal-root').innerHTML.includes('已装备'));
+   nodes.get('cdk-input').value=process.env.CDK_TEST_CODE.toLowerCase();const redeem=click('redeem-cdk');assert.equal(nodes.get('cdk-submit').disabled,true);assert.equal(nodes.get('cdk-status').textContent,'正在校验兑换码…');await click('redeem-cdk');await redeem;
+   assert.deepEqual(current().cdkClaims,['wuji-seal']);assert.equal(current().relicEquipped,true);assert.ok(nodes.get('modal-root').innerHTML.includes('神器兑换成功'));assert.ok(nodes.get('game-dialog').open);click('settings');assert.ok(nodes.get('modal-root').innerHTML.includes('已装备'));
    click('toggle-relic');assert.equal(current().relicEquipped,false);click('toggle-relic');assert.equal(current().relicEquipped,true);
    const roundtrip=current();nodes.get('import-file').files=[{size:2000,text:async()=>JSON.stringify(roundtrip)}];await nodes.get('import-file').change({target:nodes.get('import-file')});click('confirm-import');
    assert.deepEqual(current().cdkClaims,['wuji-seal']);assert.equal(current().relicEquipped,true);
-   click('settings');click('cdk');nodes.get('cdk-input').value=process.env.CDK_TEST_CODE;await listeners.submit({target:{id:'cdk-form'},preventDefault(){}});assert.match(nodes.get('cdk-status').textContent,/已经兑换/);click('close');
+   click('settings');click('cdk');nodes.get('cdk-input').value=process.env.CDK_TEST_CODE;await listeners.keydown({key:'Enter',target:{id:'cdk-input'},preventDefault(){}});assert.match(nodes.get('cdk-status').textContent,/已经兑换/);click('close');
   }
   const snapshot=JSON.stringify(current());nodes.get('import-file').files=[{size:15,text:async()=>'{"foreign":true}'}];await nodes.get('import-file').change({target:nodes.get('import-file')});assert.equal(JSON.stringify(current()),snapshot);
  }finally{globalThis.setTimeout=originalSet;globalThis.clearTimeout=originalClear;globalThis.performance=originalPerformance;globalThis.requestAnimationFrame=originalRAF;globalThis.cancelAnimationFrame=originalCAF;}
