@@ -1,0 +1,18 @@
+const {MARTIAL_ARTS,PETS,freshState,fighterFor,Battle}=require('./engine.mjs');
+const {fighterArt}=require('./fighter-rig.mjs');
+const {playCombatMotion}=require('./combat-motion.mjs');
+const arts=[...MARTIAL_ARTS.map(a=>({...a,kind:'martial',pet:'penguin'})),...Object.entries(PETS).map(([pet,p])=>({id:pet,name:p.burst,kind:'burst',pet,move:{penguin:'combo',panda:'slam',cat:'spin-kick',rabbit:'flying-kick'}[pet],hits:['penguin','cat'].includes(pet)?2:1}))];
+let current=null,loop=null,paused=false,rate=1,mode='full',side=0;
+const select=document.querySelector('#demo-art');select.innerHTML=arts.map((a,i)=>'<option value="'+i+'">'+(a.kind==='burst'?'专属绝招 · ':'')+a.name+'</option>').join('');
+function stop(){clearTimeout(loop);current?.();current=null;paused=false;document.querySelector('#demo-pause').textContent='暂停';}
+function play(){stop();const art=arts[Number(select.value)],base=fighterFor(freshState()),b=new Battle({...base,pet:art.pet,weapons:[],skills:[]},{...base,pet:'cat',weapons:[],skills:[]},()=>.5);b.actor=side;const e=b.step();e.kind=art.kind;e.artId=art.id;e.name=art.name;e.move=art.move;e.hits=art.hits||1;e.dodged=false;e.crit=art.kind==='burst';e.damage=88;e.heal=art.id==='spring-palm'?30:0;e.before[side].pet=art.pet;e.after[side].pet=art.pet;
+ const scene=document.querySelector('#scene');scene.innerHTML='<div class="demo-health"><span>特效演武 · 不影响存档</span><span id="demo-hit">等待命中</span></div><div class="event-banner burst">'+art.name+'</div>'+e.before.map((f,i)=>'<div class="fighter '+(i?'right':'left')+'" id="fighter-'+i+'"><div class="fighter-inner">'+fighterArt(f.pet,{index:i,enemy:i===1,held:null})+'</div></div>').join('')+'<div id="ground-weapons" class="ground-weapons"></div><div id="combat-fx" class="combat-fx"></div>';
+ current=playCombatMotion(e,{speed:rate,motion:mode,onImpact(){document.querySelector('#demo-hit').textContent='命中 · '+e.damage+' 伤害';},onFinish(){current=null;loop=setTimeout(play,650);}});
+}
+select.onchange=play;document.querySelector('#demo-replay').onclick=play;
+document.querySelector('#demo-pause').onclick=()=>{if(!current){stop();play();}paused=!paused;paused?current?.pause():current?.resume();document.querySelector('#demo-pause').textContent=paused?'继续':'暂停';};
+document.querySelector('#demo-speed').onchange=e=>{rate=Number(e.target.value);current?.setRate(rate);};
+document.querySelector('#demo-mode').onclick=e=>{mode=mode==='full'?'reduced':'full';e.target.textContent=mode==='full'?'完整特效':'简化动画';current?.setMotion(mode);};
+document.querySelector('#demo-side').onclick=()=>{side=1-side;play();};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(loop);current?.pause();}else if(!paused){if(current)current.resume();else play();}});
+play();

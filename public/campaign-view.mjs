@@ -1,5 +1,5 @@
-import {CHAPTERS,TOTAL_STAGES,STAGES_PER_CHAPTER,stageFor,weapon,PETS,SKILLS} from './engine.mjs?v=1.4.0';
-import {icon,petArt} from './art.mjs?v=1.4.0';
+import {CHAPTERS,TOTAL_STAGES,STAGES_PER_CHAPTER,stageFor,weapon,PETS,SKILLS} from './engine.mjs?v=1.5.0';
+import {icon,petArt} from './art.mjs?v=1.5.0';
 export function journeyView(s,u,statsGrid){
  const target=stageFor(u.towerStage),chapter=target.chapter,c=CHAPTERS[chapter],first=chapter*STAGES_PER_CHAPTER+1,cleared=Math.min(TOTAL_STAGES,s.stage-1);
  const tag=target.chapterBoss?'章节大 Boss':target.boss?'高难度小 Boss':'剧情关卡';

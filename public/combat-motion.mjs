@@ -1,7 +1,8 @@
-import {weaponArt} from './art.mjs?v=1.4.0';
-import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=1.4.0';
-import {createMotionClock} from './motion-clock.mjs?v=1.4.0';
-import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=1.4.0';
+import {createBattleVfx} from './combat-vfx.mjs?v=1.5.0';
+import {weaponArt} from './art.mjs?v=1.5.0';
+import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=1.5.0';
+import {createMotionClock} from './motion-clock.mjs?v=1.5.0';
+import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=1.5.0';
 export {motionTiming,contactDistance};
 const STAR='<svg viewBox="0 0 100 100" aria-hidden="true"><path d="m50 1 11 31 29-17-15 29 25 10-30 10 13 29-27-20-15 27-5-34L3 72l20-26L1 26l33 4z" fill="currentColor"/><path d="m50 25 5 19 19 5-19 6-5 20-6-20-18-6 18-5z" fill="#fffcdd"/></svg>';
 // Everything on screen is sampled from one clock. SVG attributes avoid independent CSS/WAAPI timelines.
@@ -24,6 +25,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
   const gr=document.querySelector('#ground-weapons')?.getBoundingClientRect();
   return{width,height,fighters:boxes,ground:{x:width*.5,y:gr?gr.top-sr.top+(gr.height??gr.bottom-gr.top)*.5:height-60}};
  }
+ const visualEffects=createBattleVfx(layer);
  let sequence=createCombatSequence(event,layout());
  const actor=event.actor,target=event.target;
  const initialWeapon=['martial','burst','stunned','burn','pickup'].includes(event.kind)?event.before[actor].held:event.weapon;
@@ -34,6 +36,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
  function render(time){
   if(cleaned)return;
   const v=sampleCombat(sequence,time),pose=reduced?GUARD:v.pose,targetPose=reduced?GUARD:v.targetPose;
+  visualEffects.render(sequence,v,time,reduced);
   applyRigPose(rigs[actor],pose);applyRigPose(rigs[target],targetPose);
   if(fighters[actor])fighters[actor].style.transform=reduced?'':`translate(${v.position.x}px,${v.position.y}px)`;
   if(fighters[target])fighters[target].style.transform=reduced?'':`translate(${v.targetPosition.x}px,0)`;
@@ -47,7 +50,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
   sparks.forEach((n,i)=>{const s=v.sparks[i];if(s&&!reduced)place(n,s,{size:s.size,angle:s.angle,scale:.5+s.age/220,opacity:s.opacity});else hide(n);});
   labels.forEach((n,i)=>{const l=v.labels[i];if(!n)return;if(!l){hide(n);return;}const box=sequence.layout.fighters[l.who],offset=l.who===actor?v.position:v.targetPosition;n.textContent=l.text;n.className='combat-effect timeline-label '+l.kind;place(n,{x:box.x+(reduced?0:offset.x),y:box.top+15+(l.kind==='shield'?24:0)-(reduced?0:l.age*.05)},{size:140,opacity:l.opacity});n.style.height='24px';});
  }
- function clear(){if(cleaned)return;cleaned=true;if(pickedFloor)pickedFloor.style.opacity='1';for(const n of created)n.remove();fighters.forEach((f,i)=>{f?.classList.remove('motion-active','motion-target');if(f)f.style.transform='';if(bodies[i])bodies[i].style.transform='';applyRigPose(rigs[i],GUARD);if(shadows[i]){shadows[i].setAttribute('transform','');shadows[i].style.opacity='';}if(hands[i])hands[i].style.opacity='1';});window.removeEventListener?.('resize',resize);}
+ function clear(){if(cleaned)return;cleaned=true;visualEffects.destroy();if(pickedFloor)pickedFloor.style.opacity='1';for(const n of created)n.remove();fighters.forEach((f,i)=>{f?.classList.remove('motion-active','motion-target');if(f)f.style.transform='';if(bodies[i])bodies[i].style.transform='';applyRigPose(rigs[i],GUARD);if(shadows[i]){shadows[i].setAttribute('transform','');shadows[i].style.opacity='';}if(hands[i])hands[i].style.opacity='1';});window.removeEventListener?.('resize',resize);}
  function resize(){if(cleaned)return;sequence=createCombatSequence(event,layout());render(clock?.elapsed||0);}
  window.addEventListener?.('resize',resize);
  clock=createMotionClock({duration:sequence.t.duration,rate:speed,cues:sequence.cues,driver,onFrame:render,onCue(cue){if(cue.kind==='impact')onImpact(event.hits>1&&!event.dodged&&cue.part===1?.5:1);else onTransfer();},onFinish(){clear();onFinish();}});

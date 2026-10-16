@@ -1,4 +1,4 @@
-import {GUARD,POSES,rigFrames} from './fighter-rig.mjs?v=1.4.0';
+import {GUARD,POSES,rigFrames} from './fighter-rig.mjs?v=1.5.0';
 const cap=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
 const ease=t=>{t=cap(t);return t*t*(3-2*t);};
 const mix=(a,b,t)=>a+(b-a)*t;

@@ -50,3 +50,9 @@ services:
       - path: /weapon-illustrations.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
+      - path: /relics.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /combat-vfx.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8

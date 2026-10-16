@@ -1,5 +1,6 @@
-import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=1.4.0';
-import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=1.4.0';
+import {RELIC,relicActive} from './relics.mjs?v=1.5.0';
+import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=1.5.0';
+import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=1.5.0';
 export {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL};
 export const VERSION=1;
 export const HEALTH_SCALE=3.2;
@@ -58,7 +59,7 @@ export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function seeded(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 export function today(){const d=new Date();return`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
 export function xpNeeded(level){return 65+level*30;}
-export function freshState(){return{version:VERSION,contentVersion:2,name:'豆豆',pet:'penguin',level:1,xp:0,gold:220,rating:0,wins:0,losses:0,battles:0,streak:0,bestStreak:0,stage:1,owned:['bamboo','brick'],equipped:['bamboo','brick'],skills:['wind'],training:{hp:0,atk:0,def:0,agi:0},stance:'balanced',daily:{date:today(),battles:0,wins:0,trains:0,claimed:[]},settings:{sound:false,speed:1.5,autoBurst:true,motion:'full'},history:[],rewarded:[],createdAt:Date.now()};}
+export function freshState(){return{version:VERSION,contentVersion:2,cdkClaims:[],relicEquipped:false,name:'豆豆',pet:'penguin',level:1,xp:0,gold:220,rating:0,wins:0,losses:0,battles:0,streak:0,bestStreak:0,stage:1,owned:['bamboo','brick'],equipped:['bamboo','brick'],skills:['wind'],training:{hp:0,atk:0,def:0,agi:0},stance:'balanced',daily:{date:today(),battles:0,wins:0,trains:0,claimed:[]},settings:{sound:false,speed:1.5,autoBurst:true,motion:'full'},history:[],rewarded:[],createdAt:Date.now()};}
 export function normalizeState(raw){
   if(!raw||typeof raw!=='object'||raw.version!==VERSION)throw new Error('这不是有效的江湖存档。');
   const s=freshState();
@@ -67,6 +68,8 @@ export function normalizeState(raw){
   s.pet=PETS[raw.pet]?raw.pet:s.pet;
   for(const key of ['level','xp','gold','rating','wins','losses','battles','streak','bestStreak','stage'])s[key]=number(raw[key],key==='level'||key==='stage'?1:0,key==='stage'?TOTAL_STAGES+1:key==='level'?MAX_LEVEL:1000000,s[key]);
   s.xp=Math.min(s.xp,xpNeeded(s.level)-1);
+  s.cdkClaims=Array.isArray(raw.cdkClaims)&&raw.cdkClaims.includes(RELIC.id)?[RELIC.id]:[];
+  s.relicEquipped=s.cdkClaims.length>0&&raw.relicEquipped===true;
   s.owned=[...new Set(['bamboo',...(Array.isArray(raw.owned)?raw.owned:[])].filter(id=>WEAPONS.some(w=>w.id===id)))];
   s.equipped=[...new Set((Array.isArray(raw.equipped)?raw.equipped:[]).filter(id=>s.owned.includes(id)))];if(!s.equipped.length)s.equipped=['bamboo'];
   s.skills=[...new Set((Array.isArray(raw.skills)?raw.skills:[]).filter(id=>SKILLS.some(k=>k.id===id&&k.level<=s.level)))];
@@ -80,9 +83,9 @@ export function normalizeState(raw){
   return s;
 }
 export function syncDay(s){if(s.daily.date!==today())s.daily={date:today(),battles:0,wins:0,trains:0,claimed:[]};}
-export function statsFor(s){const p=PETS[s.pet],l=s.level-1,t=s.training;let out={hp:Math.round((p.hp+l*12+t.hp*7)*HEALTH_SCALE),atk:Math.round(p.atk+l*2.4+t.atk*1.4),def:Math.round(p.def+l*1.15+t.def*1.1),agi:Math.round(p.agi+l*1.2+t.agi*1.3)};if(s.stance==='fierce'){out.atk=Math.round(out.atk*1.18);out.def=Math.round(out.def*.8);}if(s.stance==='nimble')out.atk=Math.round(out.atk*.9);return out;}
-export function power(f){return Math.round(f.hp*.11+f.atk*3.5+f.def*2.8+f.agi*1.8+f.weapons.reduce((sum,id)=>sum+(weapon(id).min+weapon(id).max)*1.2,0)/Math.max(1,f.weapons.length)+f.skills.length*12);}
-export function fighterFor(s){const f={name:s.name,pet:s.pet,level:s.level,...statsFor(s),weapons:[...s.equipped],skills:[...s.skills],stance:s.stance};return{...f,power:power(f)};}
+export function statsFor(s){const p=PETS[s.pet],l=s.level-1,t=s.training;let out={hp:Math.round((p.hp+l*12+t.hp*7)*HEALTH_SCALE),atk:Math.round(p.atk+l*2.4+t.atk*1.4),def:Math.round(p.def+l*1.15+t.def*1.1),agi:Math.round(p.agi+l*1.2+t.agi*1.3)};if(s.stance==='fierce'){out.atk=Math.round(out.atk*1.18);out.def=Math.round(out.def*.8);}if(s.stance==='nimble')out.atk=Math.round(out.atk*.9);out.evasion=0;if(relicActive(s)){out.atk+=RELIC.atk;out.def+=RELIC.def;out.evasion=RELIC.evasion;}return out;}
+export function power(f){return Math.round(f.hp*.11+f.atk*3.5+f.def*2.8+f.agi*1.8+f.weapons.reduce((sum,id)=>sum+(weapon(id).min+weapon(id).max)*1.2,0)/Math.max(1,f.weapons.length)+f.skills.length*12+(f.evasion||0)*1.8);}
+export function fighterFor(s){const f={name:s.name,pet:s.pet,level:s.level,...statsFor(s),weapons:[...s.equipped],skills:[...s.skills],stance:s.stance,relic:relicActive(s)?RELIC.id:null};return{...f,power:power(f)};}
 function enemyFor(name,pet,level,factor=1,boss=false,seed=1){const rng=seeded(seed),p=PETS[pet],l=level-1;const available=WEAPONS.filter(w=>w.level<=level+1);const weapons=[...available].sort(()=>rng()-.5).slice(0,Math.min(available.length,2+Math.floor(level/3)+(boss?2:0))).map(w=>w.id);const skills=SKILLS.filter(k=>k.level<=level).slice(-2).map(k=>k.id);const f={name,pet,level,hp:Math.round((p.hp+l*15)*HEALTH_SCALE*factor*(boss?1.20:1)),atk:Math.round((p.atk+l*2.7)*factor),def:Math.round((p.def+l*1.3)*factor),agi:Math.round((p.agi+l*1.1)*factor),weapons,skills,stance:'balanced',boss};return{...f,power:power(f)};}
 export function rivalsFor(s,seed){return [.80,.98,1.15].map((factor,i)=>{const rng=seeded(seed+i*371);const index=Math.floor(rng()*RIVAL_NAMES.length),pet=Object.keys(PETS)[Math.floor(rng()*4)],level=Math.max(1,s.level+(i===2?1:0));return{...enemyFor(RIVAL_NAMES[index],pet,level,factor,false,seed+i*11),key:`rival-${seed}-${i}`,mode:'arena',gold:48+i*18+s.level*5,xp:34+i*10+s.level*3,difficulty:i};});}
 export function stageFor(n){
@@ -185,7 +188,7 @@ export class Battle{
     }
     const heldWeapon=armed?weapon(att.held):FISTS;
     const w=burst?{id:'burst',name:PETS[att.pet].burst,min:8,max:15,accuracy:1.5}:art?{id:'fists',name:art.name,min:3,max:7,accuracy:1,pierce:art.pierce,stun:art.stun,drain:art.drain,burn:art.burn}:heldWeapon;
-    event.weapon=w.id;event.name=disposal?(disposal==='throw'?'飞掷·':'弃械·')+heldWeapon.name:w.name;event.kind=disposal|| (burst?'burst':art?'martial':'attack');
+    event.artId=art?.id||null;event.weapon=w.id;event.name=disposal?(disposal==='throw'?'飞掷·':'弃械·')+heldWeapon.name:w.name;event.kind=disposal|| (burst?'burst':art?'martial':'attack');
     event.move=disposal|| (burst?{penguin:'combo',panda:'slam',cat:'spin-kick',rabbit:'flying-kick'}[att.pet]:art?.move||w.move|| (armed?['hammer','pan','spoon'].includes(w.id)?'smash':['slipper','nunchaku'].includes(w.id)?'double-slash':'slash':['punch','kick','palm'][Math.floor(rng()*3)]));
     if(artReady){this.counters[a].arts++;if(a===0)this.queuedBurst=false;if(armed)event.notes.push('持械时 6% 概率触发绝学');}
     if(burst)att.rage=0;
@@ -196,8 +199,8 @@ export class Battle{
       if(disposal==='discard')return this.complete(event);
     }else this.useHeld(att,event);
     att.attacks++;
-    const evade=clamp(.055+(def.agi-att.agi)*.0025+(def.pet==='cat'?.05:0)+(def.skills.includes('wind')?.07:0)+(def.stance==='nimble'?.09:0),.025,.35);
-    event.dodged=!burst&&rng()>clamp((disposal?.93:w.accuracy)+(has('keen')?.08:0)-evade,.38,.985);
+    const evade=clamp(.055+(def.agi-att.agi)*.0025+(def.pet==='cat'?.05:0)+(def.skills.includes('wind')?.07:0)+(def.stance==='nimble'?.09:0)+(def.evasion||0)/((def.evasion||0)+2500)*.9,.025,def.evasion?.95:.35);
+    event.dodged=!burst&&rng()>clamp((disposal?.93:w.accuracy)+(has('keen')?.08:0)-evade,def.evasion?.05:.38,.985);
     if(!event.dodged){
       event.crit=rng()<clamp(.08+att.agi*.0015+(att.pet==='penguin'?.08:0)+(has('focus')?.12:0)+(disposal?0:w.crit||0),0,.65);event.hits=disposal?1:burst&&['penguin','cat'].includes(att.pet)?2:art?.hits||w.hits||1;
       const defense=def.def*(1-(disposal?0:w.pierce||0))*(burst&&att.pet==='cat'?.4:1)*(has('piercing')?.82:1);
