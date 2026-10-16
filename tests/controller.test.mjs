@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Script} from 'node:vm';
 test('Actual controller completes fights, blocks mid-fight edits, trains, claims and restores saves',async()=>{
+ if(process.env.CDK_NO_WEB_CRYPTO)Object.defineProperty(globalThis,'crypto',{value:undefined,configurable:true});
  const listeners={},nodes=new Map(),storage=new Map(),timers=new Map();let timerId=0,clock=0;
  class Element{
   constructor(id){this.id=id;this.html='';this.textContent='';this.open=false;this.dataset={};this.style={};this.offsetWidth=300;this.isConnected=true;this.classList={add(){},remove(){}};}
@@ -24,7 +25,7 @@ test('Actual controller completes fights, blocks mid-fight edits, trains, claims
  function advance(ms){const end=clock+ms;let guard=0;while(true){const next=[...timers].filter(([,t])=>t.due<=end).sort((a,b)=>a[1].due-b[1].due)[0];if(!next)break;assert.ok(guard++<5000);timers.delete(next[0]);clock=next[1].due;next[1].fn();}clock=end;}
  function resolveResult(){for(const[id,t]of [...timers])if(t.ms===500){timers.delete(id);t.fn();}}
  try{
-  if(process.env.PET_BRAWL_OFFLINE_PREVIEW){const html=readFileSync(new URL('../review/playable-preview.html',import.meta.url),'utf8'),code=html.match(/<script id="preview-app">([\s\S]*?)<\/script>/)[1];new Script(code).runInThisContext();}else await import('../public/app.mjs');assert.equal(current().battles,0);
+  if(process.env.PET_BRAWL_OFFLINE_PREVIEW){const html=readFileSync(new URL('../review/pet-brawl-v1.5.0-cdk-fixed.html',import.meta.url),'utf8'),code=html.match(/<script id="preview-app">([\s\S]*?)<\/script>/)[1];new Script(code).runInThisContext();}else await import('../public/app.mjs');assert.equal(current().battles,0);
   assert.equal(current().settings.motion,'full');click('motion');assert.equal(current().settings.motion,'reduced');click('motion');assert.equal(current().settings.motion,'full');
   click('start');assert.ok(nodes.get('app').innerHTML.includes('in-battle'));
   click('nav','training');assert.ok(nodes.get('app').innerHTML.includes('in-battle'));

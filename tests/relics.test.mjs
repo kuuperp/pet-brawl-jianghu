@@ -1,7 +1,8 @@
 import test from 'node:test';
+import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {freshState,normalizeState,statsFor,fighterFor,stageFor,rivalsFor,WEAPONS,Battle,seeded} from '../public/engine.mjs';
-import {RELIC,hasRelic,redeemCdk} from '../public/relics.mjs';
+import {RELIC,hasRelic,redeemCdk,sha256Ascii,normalizeCdk} from '../public/relics.mjs';
 const valid=process.env.CDK_TEST_CODE;
 test('Old saves have no relic; malformed and wrong codes never mutate progress',async()=>{
  const state=freshState(),old={...state};delete old.cdkClaims;delete old.relicEquipped;
@@ -35,4 +36,19 @@ test('Relic stats affect actual damage, defense and evasion; weapon removal cann
  const b=new Battle({...attacking,weapons:[]},{...equipped,weapons:[]},()=>0);b.actor=0;const weak=b.step();assert.ok(weak.damage<5);assert.equal(weak.dodged,false);
  const remove=new Battle(equipped,enemy,()=>.5);const original=remove.fighters[0].def;remove.removeHeld(remove.fighters[0]);assert.equal(remove.fighters[0].def,original);assert.equal(remove.fighters[0].relic,RELIC.id);
  const duel=new Battle(equipped,stageFor(200),seeded(92));while(!duel.done)duel.step();assert.equal(duel.winner,0);assert.ok(duel.steps<=160);
+});
+
+test('Portable digest matches independent SHA-256 for standard vectors and all CDK-sized block boundaries',()=>{
+ for(const text of ['', 'abc', ...Array.from({length:130},(_,i)=>'A-9'.repeat(i).slice(0,i))])assert.equal(sha256Ascii(text),createHash('sha256').update(text).digest('hex'));
+ assert.throws(()=>sha256Ascii('中文'));
+ assert.equal(normalizeCdk(' “abcd — efgh–1234\n” '),'ABCD-EFGH-1234');
+});
+test('Correct codes redeem without Web Crypto or TextEncoder, including clipboard variants',{skip:!valid},async()=>{
+ const descriptors=Object.fromEntries(['crypto','TextEncoder'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ try{
+  for(const k of Object.keys(descriptors))Object.defineProperty(globalThis,k,{value:undefined,configurable:true});
+  const variants=[valid,' '+valid.toLowerCase()+' ',valid.replaceAll('-',' — '),valid.replaceAll('-','\n–\u200B'), '“'+valid+'”',valid.replace(/[A-Z0-9-]/g,c=>String.fromCharCode(c.charCodeAt(0)+0xFEE0))];
+  for(const code of variants){const state=freshState();assert.equal((await redeemCdk(state,code)).ok,true);assert.equal(statsFor(state).atk-statsFor(freshState()).atk,50000);assert.equal((await redeemCdk(state,code)).ok,false);}
+  assert.equal((await redeemCdk(freshState(),valid.slice(0,-1)+'Z')).ok,false);
+ }finally{for(const [k,desc]of Object.entries(descriptors)){if(desc)Object.defineProperty(globalThis,k,desc);else delete globalThis[k];}}
 });
