@@ -31,12 +31,12 @@ test('3D labels mount hidden, update only on contact, retain their nodes and fre
   const hits=[];motion=playCombatMotion(e,{driver,speed:1,onImpact:f=>hits.push(f)});
   const nodes=[...layer.children];assert.ok(nodes.length>=4);assert.ok(nodes.every(n=>n.style.opacity==='0'));
   driver.advance(600);assert.ok(writes.some(w=>w[0]==='uniform1f'&&w[1]==='uExposure'&&w[2]<1));assert.ok(scene.children.some(n=>n.className==='cinematic-canvas'));
-  driver.advance(279);assert.deepEqual(hits,[]);assert.ok(nodes.every(n=>n.style.opacity==='0'));
+  driver.advance(519);assert.deepEqual(hits,[]);assert.ok(nodes.every(n=>n.style.opacity==='0'));
   driver.advance(1);assert.deepEqual(hits,[.5]);assert.equal(nodes.find(n=>n.textContent==='−16').style.opacity,'1');assert.equal(nodes.find(n=>n.textContent==='−15').style.opacity,'0');
   const firstLeft=nodes.find(n=>n.textContent==='−16').style.left;assert.ok(firstLeft.endsWith('px'),'Floats use the camera projection');
   assert.ok(writes.some(w=>w[0]==='uniform1f'&&w[1]==='uPointPower'&&w[2]>0));assert.ok(screenWrites.some(w=>w[0]==='ellipse'));
   motion.pause();const frozen=nodes.map(n=>JSON.stringify(n.style)),pausedWrites=screenWrites.length;driver.advance(5000);assert.deepEqual(nodes.map(n=>JSON.stringify(n.style)),frozen);assert.equal(screenWrites.length,pausedWrites);
-  motion.setMotion('reduced');assert.deepEqual(hits,[.5]);motion.resume();driver.advance(286);
+  motion.setMotion('reduced');assert.deepEqual(hits,[.5]);motion.resume();driver.advance(364);
   assert.deepEqual(hits,[.5,1]);assert.deepEqual(layer.children,nodes,'The second hit cannot replace or reset first-hit DOM nodes');
   assert.equal(nodes.find(n=>n.textContent==='−16').style.opacity,'1');assert.equal(nodes.find(n=>n.textContent==='−15').style.opacity,'1');
   motion.setRate(3);driver.advance(1000);assert.equal(layer.children.length,0);assert.deepEqual(hits,[.5,1]);assert.ok(writes.some(w=>w[0]==='drawArrays'));

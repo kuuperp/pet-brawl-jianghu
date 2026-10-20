@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCombatSequence,sampleCombat} from '../public/combat-sequence.mjs';
 import {combatSnapshot,presentationAt,sampleCombatLabels,labelLifetime,presentationDuration} from '../public/combat-presentation.mjs';
-import {battleViewport,frontalArenaView,fighterPositions} from '../public/battle-layout.mjs';
+import {battleViewport,frontalArenaView,fighterPositions,ARENA_HALF_WIDTH} from '../public/battle-layout.mjs';
 import {cameraMatrix,projectPoint} from '../public/mini-gl.mjs';
 import {stageFor,fighterFor,freshState} from '../public/engine.mjs';
 const layout={width:1200,height:640,fighters:[{x:336,top:330,width:150,height:160},{x:864,top:330,width:150,height:160}],ground:{x:600,y:500}};
@@ -73,8 +73,8 @@ test('Frontal eye-level framing keeps both feet aligned and every chapter boss i
    const top=(fighters[i].pet==='rabbit'?4.05:fighters[i].boss?3.95:3.45)*p.scale;
    assert.ok(project([p.x,top,0]).y>=8,`${width}/${stage} head clipped`);
    for(const x of [-1.1,1.1])assert.ok(project([p.x+x*p.scale,2*p.scale,0]).visible);
-   assert.ok(Math.abs(p.x)+.7*p.scale<6.2,'Fighters stand on the deck');
+   assert.ok(Math.abs(p.x)+.7*p.scale<ARENA_HALF_WIDTH-.2,'Fighters stand on the deck');
   }
-  for(const x of [-6.4,6.4])assert.ok(project([x,-.34,2.6]).visible,'Front stage edge fits the viewport');
+  for(const x of [-ARENA_HALF_WIDTH,ARENA_HALF_WIDTH])assert.ok(project([x,-.34,2.6]).visible,'Front stage edge fits the viewport');
  }
 });

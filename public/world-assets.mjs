@@ -1,4 +1,5 @@
 // Sculpted game assets. Every visible part is a lit 3D mesh; no billboard characters.
+import {ARENA_LENGTH_SCALE} from './battle-layout.mjs?v=2.2.0';
 const PI=Math.PI, TAU=PI*2, RAD=PI/180;
 const finite=(x,f=0)=>Number.isFinite(x)?x:f;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -545,7 +546,8 @@ function ambientBase(r,p){
 
 export function drawArena(r,chapter={},time=0){
  const p=arenaTheme(chapter),id=p.id,t=finite(time);
- ambientBase(r,p);platform(r,p,id);
+ r.push();r.scale(ARENA_LENGTH_SCALE,1,1);ambientBase(r,p);platform(r,p,id);r.pop();
+ banners(r,p,9.2,-3.3);
  if(id==='bamboo'){
   for(const [x,z,h] of [[-5.9,-4,4.2],[-4.9,-5.2,3.6],[5.6,-4.6,4.8],[6.5,-3.2,3.5]])bamboo(r,x,z,h);
   gate(r,p,{width:4.8,y:3.7});for(const x of [-2.5,2.5])lantern(r,x,2.9,-4.65,p,.8,t);

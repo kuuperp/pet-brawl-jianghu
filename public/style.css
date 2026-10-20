@@ -73,3 +73,4 @@ dialog{padding:0;border:1px solid #e3e4d5;border-radius:23px;color:var(--ink);ba
 @media(max-width:1000px){.scene.is-3d{height:450px}}
 @media(max-width:600px){.scene.is-3d{height:370px}.scene.is-3d .event-banner{top:94px;max-width:90%;font-size:9px;padding:4px 10px}.scene.is-3d .health-box{padding:6px 8px}.scene.is-3d .scene-round{bottom:9px}.world-float{font-size:24px}.world-float.critical{font-size:28px}}
 .cinematic-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:2;pointer-events:none;contain:strict}
+.scene:not(.is-3d) .fighter.left{left:4%}.scene:not(.is-3d) .fighter.right{right:4%}.disposal-row>strong{font-size:11px;font-weight:600;color:var(--green)}

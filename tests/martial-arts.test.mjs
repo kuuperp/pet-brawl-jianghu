@@ -8,24 +8,27 @@ import {pocketsView,combatControls} from '../public/views.mjs';
 const practice=(weapons=['bamboo','pan'],rng=()=>.5)=>{const f={...fighterFor(freshState()),hp:100000,skills:[]};return new Battle({...f,weapons},{...f,name:'木桩伙伴',pet:'panda',weapons:[]},rng);};
 const heroTurn=b=>{b.actor=0;return b.step();};
 
-test('The same weapon is held for five own actions, then thrown and replaced without resetting other copies',()=>{
- const b=practice();for(let n=1;n<=MAX_WEAPON_USES;n++){const v=heroTurn(b);assert.equal(v.kind,'attack');assert.equal(v.weapon,'bamboo');assert.equal(b.fighters[0].heldUses,n);}
- assert.equal(b.requestTactic('steal'),false);const t=heroTurn(b);assert.equal(t.kind,'throw');assert.ok(t.damage>0);assert.deepEqual(b.fighters[0].weapons,['pan']);assert.equal(b.discarded[0].uses,5);assert.equal(b.ground.length,0);assert.equal(b.fighters[0].held,null);
- const next=heroTurn(b);assert.equal(next.weapon,'pan');assert.equal(b.fighters[0].heldUses,1);assert.equal(b.counters[0].throws,1);
+test('A physical weapon retires at its assigned 3–5 use limit and equips the next copy immediately',()=>{
+ for(const limit of [3,4,5])for(const disposal of ['throw','discard']){
+  const b=practice(),f=b.fighters[0];f.weaponLimits[0]=limit;b.setHeld(f,0);const nextLimit=f.weaponLimits[1];
+  for(let n=1;n<=limit;n++){const v=heroTurn(b);assert.equal(v.kind,'attack');assert.equal(v.weapon,'bamboo');assert.equal(f.heldUses,n);}
+  assert.equal(b.requestTactic('steal'),false);b.rng=()=>disposal==='throw'?.25:.75;const t=heroTurn(b);assert.equal(t.kind,disposal);assert.equal(t.damage>0,disposal==='throw');assert.deepEqual(f.weapons,['pan']);assert.equal(b.discarded[0].uses,limit);assert.equal(b.discarded[0].limit,limit);assert.equal(b.ground.length,0);assert.equal(f.held,'pan');assert.equal(f.heldUses,0);assert.equal(f.heldLimit,nextLimit);
+  b.rng=()=>.5;const next=heroTurn(b);assert.equal(next.weapon,'pan');assert.equal(f.heldUses,1);assert.equal(f.heldLimit,nextLimit);
+ }
 });
-test('Discard consumes an action, causes no hit, and exhausted weapons cannot be picked up',()=>{
- const b=practice(['pan']);b.setDisposal('discard');for(let i=0;i<5;i++)heroTurn(b);const hp=b.fighters[1].hp,shield=b.fighters[0].shield;
- const v=heroTurn(b);assert.equal(v.kind,'discard');assert.equal(v.damage,0);assert.equal(b.fighters[1].hp,hp);assert.equal(b.fighters[0].shield,shield);assert.equal(b.fighters[0].weapons.length,0);assert.equal(b.requestTactic('pickup'),false);assert.equal(b.discarded.length,1);assert.equal(heroTurn(b).kind,'burst');
+test('Random discard consumes one action without damage, and retired weapons cannot be picked up',()=>{
+ const b=practice(['pan']),limit=b.fighters[0].heldLimit;for(let i=0;i<limit;i++)heroTurn(b);const hp=b.fighters[1].hp,shield=b.fighters[0].shield;
+ b.rng=()=>.75;const v=heroTurn(b);assert.equal(v.kind,'discard');assert.equal(v.damage,0);assert.equal(b.fighters[1].hp,hp);assert.equal(b.fighters[0].shield,shield);assert.equal(b.fighters[0].weapons.length,0);assert.equal(b.requestTactic('pickup'),false);assert.equal(b.discarded.length,1);b.rng=()=>.5;assert.ok(['martial','burst'].includes(heroTurn(b).kind));
 });
-test('Misses count, stun does not; a missed final throw still retires the weapon',()=>{
- const b=practice(['bamboo'],()=>.999);b.fighters[0].stunned=1;assert.equal(heroTurn(b).kind,'stunned');assert.equal(b.fighters[0].heldUses,0);
- for(let i=0;i<5;i++)assert.ok(heroTurn(b).dodged);const t=heroTurn(b);assert.equal(t.kind,'throw');assert.ok(t.dodged);assert.equal(b.fighters[0].weapons.length,0);assert.equal(b.discarded.length,1);
+test('Misses count, stun does not; a randomly selected missed throw still retires its copy',()=>{
+ const b=practice(['bamboo'],()=>.999),limit=b.fighters[0].heldLimit;b.fighters[0].stunned=1;assert.equal(heroTurn(b).kind,'stunned');assert.equal(b.fighters[0].heldUses,0);
+ for(let i=0;i<limit;i++)assert.ok(heroTurn(b).dodged);let calls=0;b.rng=()=>calls++===0?.25:.999;const t=heroTurn(b);assert.equal(t.kind,'throw');assert.ok(t.dodged);assert.equal(b.fighters[0].weapons.length,0);assert.equal(b.discarded.length,1);
 });
-test('Stealing and pickup preserve physical weapon usage, including duplicate kinds',()=>{
- const b=practice(['bamboo']);b.fighters[1].weapons=['bamboo'];b.fighters[1].weaponUses=[4];b.setHeld(b.fighters[1],0);b.rng=()=>0;
- b.requestTactic('steal');heroTurn(b);assert.deepEqual(b.fighters[0].weaponUses,[1,4]);assert.equal(b.fighters[0].heldUses,4);
- b.rng=()=>.5;heroTurn(b);assert.equal(b.fighters[0].heldUses,5);assert.equal(heroTurn(b).kind,'throw');assert.deepEqual(b.fighters[0].weaponUses,[1]);heroTurn(b);assert.equal(b.fighters[0].heldUses,2);
- const c=practice();c.fighters[1].weapons=['fish'];c.fighters[1].weaponUses=[3];c.setHeld(c.fighters[1],0);c.rng=()=>0;c.requestTactic('disarm');heroTurn(c);assert.equal(c.ground[0].uses,3);c.requestTactic('pickup');heroTurn(c);assert.equal(c.fighters[0].heldUses,3);c.rng=()=>.5;heroTurn(c);heroTurn(c);assert.equal(heroTurn(c).kind,'throw');
+test('Stealing and pickup preserve per-copy usage and the original random quota',()=>{
+ const b=practice(['bamboo']);b.fighters[1].weapons=['bamboo'];b.fighters[1].weaponUses=[4];b.fighters[1].weaponLimits=[5];b.setHeld(b.fighters[1],0);b.rng=()=>0;
+ b.requestTactic('steal');heroTurn(b);assert.deepEqual(b.fighters[0].weaponUses,[1,4]);assert.deepEqual(b.fighters[0].weaponLimits,[4,5]);assert.equal(b.fighters[0].heldUses,4);assert.equal(b.fighters[0].heldLimit,5);
+ b.rng=()=>.5;heroTurn(b);assert.equal(b.fighters[0].heldUses,5);b.rng=()=>.25;assert.equal(heroTurn(b).kind,'throw');assert.deepEqual(b.fighters[0].weaponUses,[1]);assert.deepEqual(b.fighters[0].weaponLimits,[4]);b.rng=()=>.5;heroTurn(b);assert.equal(b.fighters[0].heldUses,2);
+ const c=practice();c.fighters[1].weapons=['fish'];c.fighters[1].weaponUses=[3];c.fighters[1].weaponLimits=[5];c.setHeld(c.fighters[1],0);c.rng=()=>0;c.requestTactic('disarm');heroTurn(c);assert.equal(c.ground[0].uses,3);assert.equal(c.ground[0].limit,5);c.requestTactic('pickup');heroTurn(c);assert.equal(c.fighters[0].heldUses,3);assert.equal(c.fighters[0].heldLimit,5);c.rng=()=>.5;heroTurn(c);heroTurn(c);c.rng=()=>.25;assert.equal(heroTurn(c).kind,'throw');
 });
 test('Unarmed arts are unlimited, use all thirty-two forms, and never create a weapon or auto-pickup',()=>{
  const b=practice([],seeded(1024));b.ground=[{key:1,weapon:'bamboo',uses:2,from:1}];const forms=new Set();
@@ -40,7 +43,7 @@ test('Holding weapons allows a low random art chance, even at full rage, and blo
 });
 test('Unlimited learned passives survive saves and battle UI explains the new rules',()=>{
  const s=freshState();s.level=300;for(const k of SKILLS)if(!s.skills.includes(k.id))assert.ok(toggleSkill(s,k.id).ok);assert.equal(s.skills.length,SKILLS.length);assert.deepEqual(normalizeState(s).skills,s.skills);
- const b=practice();for(let i=0;i<5;i++)heroTurn(b);assert.ok(pocketsView(b.fighters).includes('5/5'));assert.ok(combatControls(s,b).includes('下次行动投掷打人'));assert.ok(combatControls(s,practice([])).includes('无限次施展'));
+ const b=practice(),limit=b.fighters[0].heldLimit;for(let i=0;i<limit;i++)heroTurn(b);assert.ok(pocketsView(b.fighters).includes(limit+'/'+limit));assert.ok(combatControls(s,b).includes('随机投掷或丢弃'));assert.ok(combatControls(s,practice([])).includes('无限次施展'));
 });
 test('All four battle sprites have independent elbow/knee joints; strikes change limb poses, not just the container',()=>{
  for(const pet of ['penguin','panda','cat','rabbit']){const svg=fighterArt(pet,{index:0,held:'bamboo'});for(const key of Object.keys(GUARD).filter(k=>k!=='y'))assert.ok(svg.includes(`data-joint="${key}"`));assert.equal((svg.match(/id="held-0"/g)||[]).length,1);}

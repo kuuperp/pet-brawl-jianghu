@@ -1,13 +1,13 @@
-import {createMeshRenderer} from './mini-gl.mjs?v=2.1.0';
-import {drawCharacter,drawWeapon,drawArena,arenaTheme} from './world-assets.mjs?v=2.1.0';
-import {CHAPTERS,weapon} from './engine.mjs?v=2.1.0';
-import {GUARD} from './fighter-rig.mjs?v=2.1.0';
-import {createCombatSequence,sampleCombat} from './combat-sequence.mjs?v=2.1.0';
-import {createMotionClock} from './motion-clock.mjs?v=2.1.0';
-import {combatSnapshot,presentationAt,sampleCombatLabels,labelLifetime,presentationDuration} from './combat-presentation.mjs?v=2.1.0';
-import {battleViewport,frontalArenaView,fighterPositions} from './battle-layout.mjs?v=2.1.0';
-import {sampleSpectacle,drawCombatSpectacle,spectacleAnchors,createCinematicLayer} from './combat-spectacle.mjs?v=2.1.0';
-import {playCombatMotion as legacyMotion} from './combat-motion.mjs?v=2.1.0';
+import {createMeshRenderer} from './mini-gl.mjs?v=2.2.0';
+import {drawCharacter,drawWeapon,drawArena,arenaTheme} from './world-assets.mjs?v=2.2.0';
+import {CHAPTERS,weapon} from './engine.mjs?v=2.2.0';
+import {GUARD} from './fighter-rig.mjs?v=2.2.0';
+import {createCombatSequence,sampleCombat} from './combat-sequence.mjs?v=2.2.0';
+import {createMotionClock} from './motion-clock.mjs?v=2.2.0';
+import {combatSnapshot,presentationAt,sampleCombatLabels,labelLifetime,presentationDuration} from './combat-presentation.mjs?v=2.2.0';
+import {battleViewport,frontalArenaView,fighterPositions,animateFighterPositions,combatCameraFocus,ARENA_HALF_WIDTH} from './battle-layout.mjs?v=2.2.0';
+import {sampleSpectacle,drawCombatSpectacle,spectacleAnchors,createCinematicLayer} from './combat-spectacle.mjs?v=2.2.0';
+import {playCombatMotion as legacyMotion} from './combat-motion.mjs?v=2.2.0';
 const PI=Math.PI,TAU=PI*2,cap=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t;
 let current=null,previewRenderer=null,previewDisabled=false;
 const imageCache=new Map();
@@ -17,33 +17,26 @@ function beam(r,a,b,radius,color,alpha=1){const dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2
 function transport3D(r,e,p,poses,sequence){
  const {actor:part,target,depth,dir,A}=spectacleAnchors(sequence,poses),impact=sequence.t.impact/sequence.t.duration,transfer=sequence.transferTime/sequence.t.duration;
  if(e.kind==='throw'&&p>=.29&&p<=impact){const t=cap((p-.29)/(impact-.29)),x=mix(part[0],target[0],t),y=mix(part[1],target[1],t)+Math.sin(t*PI)*1.4;r.push();r.translate(x,y,depth);r.rotateZ(-p*22*dir);drawWeapon(r,e.weapon,{scale:.65*A.scale});r.pop();}
+ if(e.kind==='discard'&&p>=impact&&p<.78){const t=cap((p-impact)/(.78-impact)),x=mix(part[0],-dir*(ARENA_HALF_WIDTH+1.2),t),y=mix(part[1],-.4,t)+Math.sin(t*PI);r.push();r.translate(x,y,depth);r.rotateZ(dir*t*PI*4);drawWeapon(r,e.weapon,{scale:.6*A.scale*(1-t*.65)});r.pop();}
  if(e.weaponEvent&&['disarm','steal','pickup'].includes(e.weaponEvent.kind)&&p>=impact&&p<transfer){const kind=e.weaponEvent.kind,t=cap((p-impact)/(transfer-impact)),item=e.weaponEvent.weapon,from=kind==='pickup'?[0,.12,1]:target,to=kind==='disarm'?[0,.12,1]:part;r.push();r.translate(mix(from[0],to[0],t),mix(from[1],to[1],t)+Math.sin(t*PI),depth);r.rotateZ(t*PI*3);drawWeapon(r,item,{scale:.5});r.pop();}
 }
 function basePositions(fighters){return fighterPositions(fighters).map((position,i)=>({...position,pose:GUARD,hit:0,dead:fighters[i].hp===0?1:0,held:fighters[i].held===undefined?fighters[i].weapons?.[0]:fighters[i].held}));}
-function virtualLayout(fighters){return{width:1200,height:640,fighters:fighters.map((f,i)=>{const scale=f.modelScale||1;return{x:i?864:336,top:490-160*scale,width:150*scale,height:160*scale};}),ground:{x:600,y:500}};}
+function virtualLayout(fighters){return{width:1200,height:640,fighters:fighters.map((f,i)=>{const scale=f.modelScale||1;return{x:i?1080:120,top:490-160*scale,width:150*scale,height:160*scale};}),ground:{x:600,y:500}};}
 function drawWorld(w,time,event=null,sequence=null,reduced=false){
  if(w.disposed)return;
  const r=w.r,rect=w.scene.getBoundingClientRect(),width=rect.width||900,height=rect.height||480,dpr=Math.min(1.6,globalThis.devicePixelRatio||1),theme=arenaTheme(w.chapter),viewport=battleViewport(width,height);
  const fighters=event?event.before:w.fighters,poses=basePositions(fighters),status=event?presentationAt(sequence,time):null,shown=event?combatSnapshot(event,status.fraction,status):fighters,worldTime=event?w.idleTime+time:time;
  w.canvas.style.top=viewport.y+'px';w.canvas.style.height=viewport.height+'px';
  w.scene.style.setProperty('--arena-sky',theme.sky);
- const spectacle=event?sampleSpectacle(sequence,time,{reduced}):null,view=frontalArenaView(viewport.width,viewport.height,fighters);
+ let sample=null,p=0;
+ if(event&&sequence){
+  sample=sampleCombat(sequence,time);p=sample.progress;animateFighterPositions(poses,event,sequence,sample,{reduced});
+  poses.forEach((pose,i)=>{if(status.transferred||status.finished)pose.held=shown[i].held;if(!sample.handVisible[i])pose.held=null;});
+ }
+ const spectacle=event?sampleSpectacle(sequence,time,{reduced}):null,view=frontalArenaView(viewport.width,viewport.height,fighters,event&&!reduced?combatCameraFocus(poses,event,p):{});
  if(spectacle){view.camera[0]+=spectacle.shake.x;view.target[0]+=spectacle.shake.x;view.camera[1]+=spectacle.shake.y;view.target[1]+=spectacle.shake.y;view.fov*=1-spectacle.zoom;}
  r.begin({width:viewport.width*dpr,height:viewport.height*dpr,background:theme.sky,...view});
  drawArena(r,w.chapter,worldTime/1000);
- let sample=null,p=0;
- if(event&&sequence){
-  sample=sampleCombat(sequence,time);p=sample.progress;
-  const a=event.actor,b=event.target,A=poses[a],B=poses[b],v=sample,dir=a===0?1:-1;
-  if(!reduced){
-   A.pose=v.pose;B.pose=v.targetPose;
-   const approach=Math.abs(sequence.distance)>.01?Math.abs(v.position.x/sequence.distance):0,max=Math.abs(B.x-A.x)-.63*(A.scale+B.scale);
-   A.x+=dir*Math.max(0,max)*approach;
-   A.y=Math.max(0,-v.position.y/80)+Math.max(0,B.scale-A.scale)*1.15*Math.sin(cap((p-.20)/.45)*PI);
-   B.x+=v.targetPosition.x/80;A.dead=cap(-v.actorTilt/16);B.dead=cap(-v.targetTilt/16);B.hit=cap(Math.abs(v.targetTilt)/8)+(.4<=p&&p<.55&&!event.dodged?.4:0);
-  }
-  poses.forEach((pose,i)=>{if(status.transferred||status.finished)pose.held=shown[i].held;if(!v.handVisible[i])pose.held=null;});
- }
  for(let i=0;i<2;i++){
   const f=fighters[i],v=poses[i],visible=shown[i];
   const pose=event?v.pose:(!v.dead&&fighters[1-i].hp===0?{...GUARD,af:-145,ef:-45,body:Math.sin(time*.003)*3}:{...GUARD,body:Math.sin(time*.0018+i)*1.4});

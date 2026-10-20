@@ -1,11 +1,11 @@
-import {GUARD,POSES,rigFrames,canonicalMove} from './fighter-rig.mjs?v=2.1.0';
-import {createCombatLabels,sampleCombatLabels} from './combat-presentation.mjs?v=2.1.0';
+import {GUARD,POSES,rigFrames,canonicalMove} from './fighter-rig.mjs?v=2.2.0';
+import {createCombatLabels,sampleCombatLabels} from './combat-presentation.mjs?v=2.2.0';
 const cap=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
 const ease=t=>{t=cap(t);return t*t*(3-2*t);};
 const mix=(a,b,t)=>a+(b-a)*t;
 const blend=(a,b,t)=>Object.fromEntries(Object.keys(GUARD).map(k=>[k,mix(a[k],b[k],t)]));
 const rotate=(x,y,deg)=>{const r=deg*Math.PI/180;return{x:x*Math.cos(r)-y*Math.sin(r),y:x*Math.sin(r)+y*Math.cos(r)};};
-export function motionTiming(event,speed=1){const rate=cap(Number(speed)||1,1,3),duration=['stunned','burn'].includes(event.kind)?1000:event.kind==='boss-charge'?1500:['burst','boss-skill'].includes(event.kind)?2400:2200;return{duration:duration/rate,impact:duration*.4/rate,second:duration*.53/rate,transfer:duration*.67/rate,rate,ranged:event.kind==='throw'};}
+export function motionTiming(event,speed=1){const rate=cap(Number(speed)||1,1,3),duration=['stunned','burn'].includes(event.kind)?1000:event.kind==='boss-charge'?1500:['throw','discard'].includes(event.kind)?2200:['burst','boss-skill'].includes(event.kind)?3000:2800;return{duration:duration/rate,impact:duration*.4/rate,second:duration*.53/rate,transfer:duration*.67/rate,rate,ranged:event.kind==='throw'};}
 export function contactDistance(actor,target){return Math.max(0,Math.abs(target.x-actor.x)-(actor.width+(target.width??actor.width))*.21);}
 // Forward kinematics: effect anchors follow actual hands and feet, including mirrored opponents.
 export function rigPoint(pose,part='hand'){
@@ -28,8 +28,8 @@ export function actionPose(sequence,p){
  if(['stunned','burn'].includes(event.kind))return{...GUARD,body:Math.sin(p*Math.PI*6)*7*Math.sin(p*Math.PI),head:-Math.sin(p*Math.PI*6)*9*Math.sin(p*Math.PI)};
  if(!stationary){
   const approach=ease((p-.015)/.045)*(1-ease((p-.235)/.085)),retreat=ease((p-.67)/.065)*(1-ease((p-.895)/.095));
-  if(approach>0)pose=blend(pose,runPose((p-.04)*10),approach);
-  if(retreat>0){const run=runPose((p-.67)*9,true);if(event.move==='flip-kick')run.body-=360;pose=blend(pose,run,retreat);}
+  if(approach>0)pose=blend(pose,runPose((p-.04)*10*sequence.runCadence),approach);
+  if(retreat>0){const run=runPose((p-.67)*9*sequence.runCadence,true);if(event.move==='flip-kick')run.body-=360;pose=blend(pose,run,retreat);}
  }
  return pose;
 }
@@ -42,6 +42,7 @@ export function createCombatSequence(event,layout){
  const target=worldPoint(B,GUARD,sequence.aim,{x:0,y:0},-dir),reach=worldPoint(A,keyedPose(frames,.4),part,{x:0,y:0},dir);
  const maxDistance=Math.abs(B.x-A.x)+Math.min(A.width,B.width)*.1;
  sequence.distance=stationary?0:pickup?Math.max(0,dir*(layout.ground.x-reach.x)):cap(dir*(target.x-reach.x),0,maxDistance);
+ sequence.runCadence=cap(sequence.distance/(A.width*3.2),1,1.8);
  const secondPart=['combo','twin-palm'].includes(move)?'back-hand':move==='spin-kick'?'back-foot':part;
  const reach2=worldPoint(A,keyedPose(frames,.53),secondPart,{x:0,y:0},dir);
  sequence.secondDistance=event.hits>1?cap(dir*(target.x-reach2.x),0,maxDistance):sequence.distance;

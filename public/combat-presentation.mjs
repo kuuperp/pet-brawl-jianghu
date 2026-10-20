@@ -1,6 +1,6 @@
 // Presentation reads the same impact and transfer cues as the action clock.
 const cap=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
-const copy=f=>({...f,weapons:[...(f.weapons||[])],weaponUses:[...(f.weaponUses||[])],skills:[...(f.skills||[])]});
+const copy=f=>({...f,weapons:[...(f.weapons||[])],weaponUses:[...(f.weaponUses||[])],...(f.weaponLimits?{weaponLimits:[...f.weaponLimits]}:{}),skills:[...(f.skills||[])]});
 const portion=(n,f)=>Math.ceil((n||0)*f);
 export function combatSnapshot(event,fraction=0,{transferred=false,finished=false}={}){
  const f=finished?1:cap(fraction),before=event.before,after=event.after;
@@ -14,10 +14,10 @@ export function combatSnapshot(event,fraction=0,{transferred=false,finished=fals
   }
  }
  if(event.weaponEvent&&!transferred&&!finished)for(let i=0;i<shown.length;i++){
-  for(const key of ['weapons','weaponUses','held','heldIndex','heldUses'])shown[i][key]=Array.isArray(before[i][key])?[...before[i][key]]:before[i][key];
+  for(const key of ['weapons','weaponUses','weaponLimits','held','heldIndex','heldUses','heldLimit'])if(key in before[i])shown[i][key]=Array.isArray(before[i][key])?[...before[i][key]]:before[i][key];
  }
  if(transferred&&!finished)for(let i=0;i<shown.length;i++){
-  for(const key of ['weapons','weaponUses','held','heldIndex','heldUses'])shown[i][key]=Array.isArray(after[i][key])?[...after[i][key]]:after[i][key];
+  for(const key of ['weapons','weaponUses','weaponLimits','held','heldIndex','heldUses','heldLimit'])if(key in after[i])shown[i][key]=Array.isArray(after[i][key])?[...after[i][key]]:after[i][key];
  }
  return shown;
 }

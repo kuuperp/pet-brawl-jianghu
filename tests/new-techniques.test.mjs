@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Battle,MARTIAL_ARTS,tacticChance} from '../public/engine.mjs';
 const fighter=(skills=[],extra={})=>({name:'练功少侠',pet:'panda',level:60,hp:5000,atk:300,def:200,agi:10,weapons:['bamboo'],skills,stance:'balanced',...extra});
-function strike(att=[],def=[],options={}){const b=new Battle(fighter(att,options.att),fighter(def,options.def),options.rng||(()=>.5));b.actor=0;if(options.prepare)options.prepare(b);return{event:b.step(),battle:b};}
+function strike(att=[],def=[],options={}){const b=new Battle(fighter(att,options.att),fighter(def,options.def),()=>.5);b.rng=options.rng||(()=>.5);b.actor=0;if(options.prepare)options.prepare(b);return{event:b.step(),battle:b};}
 test('New shield, accuracy, armor penetration and damage-reduction passives change combat outcomes',()=>{
  const oak=new Battle(fighter(['oak']),fighter(),()=>.5);assert.equal(oak.fighters[0].shield,400);
  assert.equal(strike([],[],{rng:()=>.96}).event.dodged,true);assert.equal(strike(['keen'],[],{rng:()=>.96}).event.dodged,false);
@@ -29,7 +29,7 @@ test('Revival protects once per match, including lethal burning, and a later let
 test('Every named new art is selectable without a usage cap and its drain, stun or burn effect is real',()=>{
  for(let i=0;i<MARTIAL_ARTS.length;i++){
   const art=MARTIAL_ARTS[i];let call=0;const rng=()=>call++===0?(i+.01)/MARTIAL_ARTS.length:.01;
-  const b=new Battle(fighter([],{weapons:[]}),fighter(),rng);b.actor=0;b.fighters[0].hp-=500;
+  const b=new Battle(fighter([],{weapons:[]}),fighter(),()=>.5);b.rng=rng;b.actor=0;b.fighters[0].hp-=500;
   const e=b.step();assert.equal(e.name,art.name);assert.equal(e.move,art.move);assert.equal(e.kind,'martial');assert.ok(e.damage>0);if(art.drain)assert.ok(e.heal>0);if(art.stun)assert.equal(e.stun,true);if(art.burn)assert.equal(b.fighters[1].burn,Math.round(art.burn+b.fighters[0].atk*.04));assert.equal(b.fighters[0].held,null);
  }
 });

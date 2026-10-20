@@ -1,15 +1,16 @@
-import {RELIC,relicActive} from './relics.mjs?v=2.1.0';
-import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=2.1.0';
-import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=2.1.0';
-import {NEW_WEAPONS,NEW_SKILLS,NEW_ARTS,balanceWeapon} from './armory.mjs?v=2.1.0';
-import {ROUTES} from './chronicles.mjs?v=2.1.0';
-import {bossProfile,resolveBossTurn,phaseBoss,interruptBoss} from './bosses.mjs?v=2.1.0';
-import {extraDamageMultiplier,healingMultiplier,shieldMultiplier,weaponProc} from './combat-rules.mjs?v=2.1.0';
+import {RELIC,relicActive} from './relics.mjs?v=2.2.0';
+import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=2.2.0';
+import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=2.2.0';
+import {NEW_WEAPONS,NEW_SKILLS,NEW_ARTS,balanceWeapon} from './armory.mjs?v=2.2.0';
+import {ROUTES} from './chronicles.mjs?v=2.2.0';
+import {bossProfile,resolveBossTurn,phaseBoss,interruptBoss} from './bosses.mjs?v=2.2.0';
+import {extraDamageMultiplier,healingMultiplier,shieldMultiplier,weaponProc} from './combat-rules.mjs?v=2.2.0';
+import {MIN_WEAPON_USES,MAX_WEAPON_USES,randomWeaponLimit,weaponUseLimit,weaponExhausted} from './weapon-cycle.mjs?v=2.2.0';
 export {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,ROUTES};
 export const VERSION=1;
 export const HEALTH_SCALE=3.2;
 export const MAX_BATTLE_STEPS=160;
-export const MAX_WEAPON_USES=5;
+export {MIN_WEAPON_USES,MAX_WEAPON_USES,weaponUseLimit,weaponExhausted};
 export const ARMED_ART_CHANCE=.06;
 export const MARTIAL_ARTS=[
   ...EXTRA_ARTS,...NEW_ARTS,
@@ -133,37 +134,36 @@ export class Battle{
   constructor(player,enemy,rng=Math.random){
     this.rng=rng;
     // Per-copy usage follows a weapon when it is stolen or dropped. Persistent gear stays untouched.
-    this.fighters=[player,enemy].map(f=>({...f,weapons:[...f.weapons],weaponUses:f.weapons.map(()=>0),skills:[...f.skills],held:f.weapons[0]||null,heldIndex:f.weapons.length?0:-1,heldUses:0,maxHp:f.hp,hp:f.hp,rage:0,shield:(f.startShield||0)+(f.skills.includes('iron')?28:0)+(f.skills.includes('oak')?Math.round(f.hp*.08):0),bossPhase:1,bossCharge:null,bossCasts:0,bossCooldown:(f.bossProfile?.firstCharge||0)+(player.preparedEvidence?1:0),attacks:0,revived:false,stunned:0,burn:0,burnTurns:0,tacticCooldown:0}));
-    this.actor=enemy.encounter==='ambush'?1:player.agi>=enemy.agi?0:1;this.encounter=enemy.encounter||'normal';this.steps=0;this.done=false;this.winner=null;this.queuedBurst=false;this.queuedTactic=null;this.autoBurst=true;this.disposalMode='throw';
+    this.fighters=[player,enemy].map(f=>{const weaponLimits=f.weapons.map(()=>randomWeaponLimit(rng));return{...f,weapons:[...f.weapons],weaponUses:f.weapons.map(()=>0),weaponLimits,skills:[...f.skills],held:f.weapons[0]||null,heldIndex:f.weapons.length?0:-1,heldUses:0,heldLimit:weaponLimits[0]||0,maxHp:f.hp,hp:f.hp,rage:0,shield:(f.startShield||0)+(f.skills.includes('iron')?28:0)+(f.skills.includes('oak')?Math.round(f.hp*.08):0),bossPhase:1,bossCharge:null,bossCasts:0,bossCooldown:(f.bossProfile?.firstCharge||0)+(player.preparedEvidence?1:0),attacks:0,revived:false,stunned:0,burn:0,burnTurns:0,tacticCooldown:0};});
+    this.actor=enemy.encounter==='ambush'?1:player.agi>=enemy.agi?0:1;this.encounter=enemy.encounter||'normal';this.steps=0;this.done=false;this.winner=null;this.queuedBurst=false;this.queuedTactic=null;this.autoBurst=true;
     this.ground=[];this.discarded=[];this.dropSerial=0;this.counters=[0,1].map(()=>({disarms:0,steals:0,pickups:0,throws:0,discards:0,arts:0}));
   }
-  snapshot(){return this.fighters.map(f=>({...f,weapons:[...f.weapons],weaponUses:[...f.weaponUses],skills:[...f.skills]}));}
+  snapshot(){return this.fighters.map(f=>({...f,weapons:[...f.weapons],weaponUses:[...f.weaponUses],weaponLimits:[...f.weaponLimits],skills:[...f.skills]}));}
   summary(){return{rounds:Math.ceil(this.steps/2),...this.counters[0]};}
-  setHeld(f,index){f.heldIndex=index;f.held=index>=0?f.weapons[index]:null;f.heldUses=index>=0?(f.weaponUses[index]||0):0;}
+  setHeld(f,index){f.weaponLimits=f.weapons.map((_,i)=>{const n=f.weaponLimits?.[i];return Number.isInteger(n)&&n>=MIN_WEAPON_USES&&n<=MAX_WEAPON_USES?n:randomWeaponLimit(this.rng);});f.heldIndex=index;f.held=index>=0?f.weapons[index]:null;f.heldUses=index>=0?(f.weaponUses[index]||0):0;f.heldLimit=index>=0?f.weaponLimits[index]:0;}
   ensureHeld(f){if(!f.weapons.length)this.setHeld(f,-1);else if(f.heldIndex<0||f.weapons[f.heldIndex]!==f.held)this.setHeld(f,0);}
-  useHeld(f,event){if(f.heldIndex<0)return;f.weaponUses[f.heldIndex]=Math.min(MAX_WEAPON_USES,(f.weaponUses[f.heldIndex]||0)+1);f.heldUses=f.weaponUses[f.heldIndex];event.uses=f.heldUses;if(f.heldUses===MAX_WEAPON_USES)event.notes.push('兵器已用满 5 回合，下次行动必须投掷或丢弃');}
-  removeHeld(f){const i=f.heldIndex,id=f.weapons.splice(i,1)[0],uses=f.weaponUses.splice(i,1)[0]||0;this.setHeld(f,-1);return{weapon:id,uses};}
+  useHeld(f,event){if(f.heldIndex<0)return;const limit=weaponUseLimit(f);f.weaponUses[f.heldIndex]=Math.min(limit,(f.weaponUses[f.heldIndex]||0)+1);f.heldUses=f.weaponUses[f.heldIndex];event.uses=f.heldUses;event.useLimit=limit;if(f.heldUses===limit)event.notes.push(`兵器已用满 ${limit} 次，下次行动随机投掷或丢弃换装`);}
+  removeHeld(f){const i=f.heldIndex,id=f.weapons.splice(i,1)[0],uses=f.weaponUses.splice(i,1)[0]||0,limit=f.weaponLimits.splice(i,1)[0];this.setHeld(f,-1);return{weapon:id,uses,limit};}
   requestBurst(){if(this.done||this.fighters[0].weapons.length||this.queuedBurst)return false;this.queuedBurst=true;this.queuedTactic=null;return true;}
   requestTactic(kind){
-    if(this.done||!['disarm','steal','pickup'].includes(kind)||this.queuedTactic===kind||this.fighters[0].heldUses>=MAX_WEAPON_USES)return false;
+    if(this.done||!['disarm','steal','pickup'].includes(kind)||this.queuedTactic===kind||weaponExhausted(this.fighters[0]))return false;
     if(kind==='pickup'?!this.ground.length:this.fighters[0].tacticCooldown>0||!this.fighters[1].weapons.length)return false;
     this.queuedTactic=kind;this.queuedBurst=false;return true;
   }
-  setDisposal(kind){if(!['throw','discard'].includes(kind)||this.done)return false;this.disposalMode=kind;return true;}
   finish(){const[a,b]=this.fighters;if(a.hp<=0||b.hp<=0||this.steps>=MAX_BATTLE_STEPS){this.done=true;this.winner=a.hp<=0?1:b.hp<=0?0:a.hp/a.maxHp>=b.hp/b.maxHp?0:1;}return this.done;}
   complete(event){const acting=this.fighters[event.actor];for(const key of ['blind','weakened','antiHeal','evasionBuff','reflectBuff','tacticBuff'])if(acting[key]>0)acting[key]--;for(const [who,f]of this.fighters.entries())phaseBoss(f,event,who);for(const [who,f]of this.fighters.entries())if(f.hp<=0&&f.skills.includes('laststand')&&!f.revived){f.revived=true;f.hp=Math.max(1,Math.round(f.maxHp*.15));(event.revives||=[]).push({who,hp:f.hp});event.notes.push(f.name+'施展涅槃心法，恢复 '+f.hp+' 生命');}this.actor=event.target;this.finish();event.after=this.snapshot();event.groundAfter=this.ground.map(w=>({...w}));return event;}
   transfer(kind,a,b,event){
     const att=this.fighters[a],def=this.fighters[b];
     if(kind==='pickup'){
       if(!this.ground.length)return;
-      const drop=this.ground.shift();att.weapons.push(drop.weapon);att.weaponUses.push(drop.uses||0);this.setHeld(att,att.weapons.length-1);this.counters[a].pickups++;
-      event.weaponEvent={kind,weapon:drop.weapon,from:'ground',to:a,drop};event.notes.push(`捡起「${weapon(drop.weapon).name}」，已用 ${att.heldUses}/5 回合`);return;
+      const drop=this.ground.shift();att.weapons.push(drop.weapon);att.weaponUses.push(drop.uses||0);att.weaponLimits.push(drop.limit);this.setHeld(att,att.weapons.length-1);this.counters[a].pickups++;
+      event.weaponEvent={kind,weapon:drop.weapon,from:'ground',to:a,drop};event.notes.push(`捡起「${weapon(drop.weapon).name}」，已用 ${att.heldUses}/${att.heldLimit} 次`);return;
     }
     if(!def.weapons.length)return;
     interruptBoss(def,event);
     this.ensureHeld(def);const item=this.removeHeld(def);
-    event.weaponEvent={kind,weapon:item.weapon,uses:item.uses,from:b,to:kind==='steal'?a:'ground'};
-    if(kind==='steal'){att.weapons.push(item.weapon);att.weaponUses.push(item.uses);this.setHeld(att,att.weapons.length-1);this.counters[a].steals++;event.notes.push(`抢到「${weapon(item.weapon).name}」，已用 ${item.uses}/5 回合`);}
+    event.weaponEvent={kind,weapon:item.weapon,uses:item.uses,limit:item.limit,from:b,to:kind==='steal'?a:'ground'};
+    if(kind==='steal'){att.weapons.push(item.weapon);att.weaponUses.push(item.uses);att.weaponLimits.push(item.limit);this.setHeld(att,att.weapons.length-1);this.counters[a].steals++;event.notes.push(`抢到「${weapon(item.weapon).name}」，已用 ${item.uses}/${item.limit} 次`);}
     else{const drop={key:++this.dropSerial,...item,from:b};this.ground.push(drop);event.weaponEvent.drop=drop;this.counters[a].disarms++;event.notes.push(`「${weapon(item.weapon).name}」被打落到地上`);}
     if(!def.weapons.length)event.notes.push('对手兵器用尽，进入空手绝学阶段');
   }
@@ -179,12 +179,12 @@ export class Battle{
     const regen=Math.round(((att.pet==='rabbit'?Math.max(1,Math.round(att.maxHp*.02)):0)+(has('renew')?5:0)+(has('breath')?att.maxHp*.006:0)+(has('regenheart')&&att.hp<att.maxHp*.5?att.maxHp*.006:0))*(overtime?.5:1)*healingMultiplier(att));
     if(regen){const h=Math.min(att.maxHp-att.hp,regen);att.hp+=h;event.heal+=h;}
     this.ensureHeld(att);
-    const armed=!!att.held,exhausted=armed&&att.heldUses>=MAX_WEAPON_USES;
+    const armed=!!att.held,exhausted=weaponExhausted(att);
     if(!exhausted&&resolveBossTurn(this,event)){if(event.kind==='boss-skill')this.useHeld(att,event);return this.complete(event);}
     let tactic=a===0?this.queuedTactic:null;if(a===0)this.queuedTactic=null;
     if(tactic==='pickup'&&!this.ground.length||tactic&&tactic!=='pickup'&&!def.weapons.length)tactic=null;
-    // Disposal has priority over all queued attacks. It is a separate action after the fifth use.
-    const disposal=exhausted?(a===0?this.disposalMode:rng()<.8?'throw':'discard'):null;
+    // Both fighters randomly retire the exhausted physical copy before another attack.
+    const disposal=exhausted?(rng()<.5?'throw':'discard'):null;
     if(disposal){tactic=null;if(a===0)this.queuedBurst=false;}
     const manualArt=a===0&&this.queuedBurst&&!armed;
     const artReady=!disposal&&!tactic&&(armed?rng()<ARMED_ART_CHANCE:(a===1||this.autoBurst||manualArt));
@@ -212,7 +212,7 @@ export class Battle{
     if(artReady){this.counters[a].arts++;if(a===0)this.queuedBurst=false;if(armed)event.notes.push('持械时 6% 概率触发绝学');}
     if(burst)att.rage=0;
     if(disposal){
-      const item=this.removeHeld(att),drop={key:++this.dropSerial,...item,from:a};this.discarded.push(drop);this.counters[a][disposal==='throw'?'throws':'discards']++;
+      const item=this.removeHeld(att),drop={key:++this.dropSerial,...item,from:a};this.discarded.push(drop);this.counters[a][disposal==='throw'?'throws':'discards']++;this.ensureHeld(att);
       event.weaponEvent={kind:disposal,weapon:item.weapon,from:a,to:'spent',drop};event.notes.push('这把兵器退出本场，不能再拾取');
       if(!att.weapons.length)event.notes.push('兵器用尽，接下来以空手绝学应战');
       if(disposal==='discard')return this.complete(event);

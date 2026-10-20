@@ -1,11 +1,11 @@
-import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=2.1.0';
-import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,campaignFighterFor,chooseRoute,rivalsFor,stageFor,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=2.1.0';
-import {icon,petArt,weaponArt} from './art.mjs?v=2.1.0';
-import {playCombatMotion,paintArtwork,destroyScene3D,syncScene3D,resumeScene3D} from './battle3d.mjs?v=2.1.0';
-import {readProtectedSave,writeProtectedSave} from './save-store.mjs?v=2.1.0';
-import {handArt} from './fighter-rig.mjs?v=2.1.0';
-import {combatSnapshot} from './combat-presentation.mjs?v=2.1.0';
-import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=2.1.0';
+import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=2.2.0';
+import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,campaignFighterFor,chooseRoute,rivalsFor,stageFor,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=2.2.0';
+import {icon,petArt,weaponArt} from './art.mjs?v=2.2.0';
+import {playCombatMotion,paintArtwork,destroyScene3D,syncScene3D,resumeScene3D} from './battle3d.mjs?v=2.2.0';
+import {readProtectedSave,writeProtectedSave} from './save-store.mjs?v=2.2.0';
+import {handArt} from './fighter-rig.mjs?v=2.2.0';
+import {combatSnapshot} from './combat-presentation.mjs?v=2.2.0';
+import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=2.2.0';
 const STORE='pet-brawl-jianghu-v1';
 const root=document.querySelector('#app'),modalRoot=document.querySelector('#modal-root'),toastEl=document.querySelector('#toast');
 let loadedSave;try{loadedSave=readProtectedSave(localStorage,STORE);}catch{loadedSave={state:freshState(),blocked:true,recovered:false};}
@@ -41,7 +41,7 @@ function submitCdk(){
   toast(saved?result.message:'兑换成功，但浏览器未能保存，请立即导出存档。');
  }).catch(()=>{if(status)status.textContent='校验暂时失败，请重试。';}).finally(()=>{if(button){button.disabled=false;button.textContent='兑换神器';}});
 }
-function help(){showDialog('三分钟，闯入小江湖',`<div class="dialog-body"><div class="help-steps">${[['挑对手，放轻松','在乐斗广场选择对手，点「开始乐斗」。每场满血开打，不扣体力；输了也有铜钱和经验。'],['带兵器，配绝学','所有已收集兵器都能携带，兵器谱可一键全部带上。同一把武器最多使用 5 次持械行动，随后必须投掷或丢弃，可在战斗中选择。出手未命中也计数，眩晕不计数。已领悟被动绝学装配不限量。'],['缴械、抢夺与拾取','缴械打落对手手持兵器，抢夺成功则加入自己的本场武器池；拾取能捡回被缴械的兵器，并保留已使用次数。用满后投掷或丢弃的兵器退出本场，不能捡回。三者都占用一次行动，缴械与抢夺共用 3 次己方行动冷却，成功率受敏捷和身法影响。'],['空手，无限施展绝学','没有兵器后，以三十二路拳掌腿法过招，不限次数、没有冷却。可关闭自动，改为手动施展。怒气满 100 时升级为专属绝招。持械时绝学只有 6% 概率触发，不能手动强制释放。'],['长经验，闯江湖','铜钱可买兵器、永久修炼。升级提升全部属性，首次击败每章首领还能获得兵器奖励。']].map(([t,p],i)=>`<div class="help-step"><span>${i+1}</span><div><h3>${t}</h3><p>${p}</p></div></div>`).join('')}</div><p class="help-note">敏捷影响先手、闪避与暴击。防御按比例减伤，护盾先吸收伤害。战斗最多 80 回合（160 次行动）。第 41 回合开始进入决胜时刻，伤害逐渐提高、回复减半，避免僵局。超时按剩余生命比例判胜。兵器用尽时空手作战，缴械和抢夺不改变战后装备。<br><br>这是独立制作的宠物乐斗单机版，进度自动保存在本机。开启音效、导出存档和更改侠名，请点右上角头像。</p><button class="button full" style="margin-top:20px" data-action="close">懂了，去打两招 ${icon('arrow')}</button></div>`,'help');}
+function help(){showDialog('三分钟，闯入小江湖',`<div class="dialog-body"><div class="help-steps">${[['挑对手，放轻松','在乐斗广场选择对手，点「开始乐斗」。每场满血开打，不扣体力；输了也有铜钱和经验。'],['带兵器，配绝学','所有已收集兵器都能携带，兵器谱可一键全部带上。每件武器随机可用3–5次持械行动，用尽后下次行动自动换装，投掷和丢弃各有50%概率。出手未命中也计数，眩晕不计数。已领悟被动绝学装配不限量。'],['缴械、抢夺与拾取','缴械打落对手手持兵器，抢夺成功则加入自己的本场武器池；拾取能捡回被缴械的兵器，并保留已使用次数及原本的3–5次使用额度。用满后投掷或丢弃的兵器退出本场，不能捡回。三者都占用一次行动，缴械与抢夺共用 3 次己方行动冷却，成功率受敏捷和身法影响。'],['空手，无限施展绝学','没有兵器后，以三十二路拳掌腿法过招，不限次数、没有冷却。可关闭自动，改为手动施展。怒气满 100 时升级为专属绝招。持械时绝学只有 6% 概率触发，不能手动强制释放。'],['长经验，闯江湖','铜钱可买兵器、永久修炼。升级提升全部属性，首次击败每章首领还能获得兵器奖励。']].map(([t,p],i)=>`<div class="help-step"><span>${i+1}</span><div><h3>${t}</h3><p>${p}</p></div></div>`).join('')}</div><p class="help-note">敏捷影响先手、闪避与暴击。防御按比例减伤，护盾先吸收伤害。战斗最多 80 回合（160 次行动）。第 41 回合开始进入决胜时刻，伤害逐渐提高、回复减半，避免僵局。超时按剩余生命比例判胜。兵器用尽时空手作战，缴械和抢夺不改变战后装备。<br><br>这是独立制作的宠物乐斗单机版，进度自动保存在本机。开启音效、导出存档和更改侠名，请点右上角头像。</p><button class="button full" style="margin-top:20px" data-action="close">懂了，去打两招 ${icon('arrow')}</button></div>`,'help');}
 function rename(){if(!canChange())return;showDialog('取个响亮的侠名',`<form class="dialog-body" id="rename-form"><label class="field-label" for="pet-name">你的小侠，叫什么？</label><input class="name-input" id="pet-name" name="petname" value="${e(state.name)}" maxlength="12" required autocomplete="off"><button class="button full" type="submit">就叫这个名字</button></form>`,'rename');const input=document.querySelector('#pet-name');input.focus();input.select();}
 function weaponInfo(id){const w=weapon(id);showDialog(w.name,`<div class="dialog-body detail-center"><div class="detail-art" data-weapon-model="${id}">${weaponArt(id)}</div><h3>${w.effect}</h3><p>${w.flavor}</p><div class="detail-stats"><span>${w.rarity}</span><span>伤害 +${w.min}–${w.max}${w.hits?' × 2':''}</span><span>基础命中 ${Math.round(w.accuracy*100)}%</span></div><div class="detail-effect">${w.desc}</div><p class="help-note">${w.hits?'两次连击合计使用一次基础攻击，附加伤害计算两次。':'基础攻击与兵器附加伤害共同决定输出。'}伤害还会受到防御、护盾、暴击和天赋影响。${w.shield?'即使未命中也会获得护盾。':''}</p><button class="button full" style="margin-top:18px" data-action="close">收好这份兵器笔记</button></div>`,'weapon');}
 function startBattle(){
@@ -54,7 +54,7 @@ function eventText(v){
   if(v.kind==='boss-charge')return`${a.name} 正在蓄力「${v.bossSkill.name}」。下次行动释放，可用缴械、抢夺或眩晕打断。`;
   if(v.kind==='burn')return`${a.name} 被灼烧击倒，余火造成 ${v.burn} 点伤害。`;
   if(v.kind==='stunned')return`${a.name} 眼冒金星，晕乎乎地休息了一回合。`;
-  if(v.kind==='discard')return`${a.name} 将用满五回合的「${weapon(v.weapon).name}」扔出场外。${v.notes.join('，')}。`;
+  if(v.kind==='discard')return`${a.name} 将已用满次数的「${weapon(v.weapon).name}」扔出场外。${v.notes.join('，')}。`;
   let t=v.kind==='pickup'?`${a.name} 抢先捡起了地上的兵器。`:`${a.name} 使出「${v.name}」`;
   if(['disarm','steal'].includes(v.kind))t+=`（成功率 ${Math.round(v.chance*100)}%），${v.tacticSuccess?'得手了！':'被 '+b.name+' 防住了。'}`;
   else if(v.kind!=='pickup')t+=v.dodged?`，被 ${b.name} 闪开了！`:`，${v.crit?'暴击！':''}${v.hits>1?'二连击！':''}造成 ${v.damage} 点伤害${v.absorbed?'（护盾吸收 '+v.absorbed+'）':''}。`;
@@ -103,7 +103,7 @@ function finishBattle(){
 function showResult(r){const tower=ui.selected.mode==='tower',hasNext=tower&&r.won&&state.stage<=TOTAL_STAGES&&ui.selected.stage<state.stage;showDialog(r.won?'这场，打得漂亮':'下次，一定翻盘',`<div class="result-body"><div class="result-art">${petArt(state.pet)}</div><div class="result-eyebrow">${r.won?'A LITTLE VICTORY':'EVERY BATTLE COUNTS'}</div><h3 class="result-title ${r.won?'':'loss'}">${r.won?['少侠，好身手！','这局有点帅！','小爪子，大胜利！'][Math.floor(Math.random()*3)]:'不服，再练练！'}</h3><p class="result-desc">${r.won?'你战胜了 '+e(ui.selected.name)+'，江湖又多了一段传说。':'这次惜败于 '+e(ui.selected.name)+'，经验与铜钱照样带回家。'}</p><div class="result-rewards"><div><b>${icon('coin')}+${r.gold}</b><small>铜钱${r.levels.length?' · 含升级奖励':''}</small></div><div><b>${icon('spark')}+${r.xp}</b><small>经验</small></div></div>${r.levels.length||r.unlocks.length||r.chapterClear?`<div class="unlock-notice">${r.levels.length?`升级至 Lv.${state.level}！全部基础属性提升。<br>`:''}${r.unlocks.map(e).join('<br>')}${r.chapterClear?'<br>整章通关！':''}</div>`:''}${r.firstClear&&ui.selected.mode==='tower'?`<div class="story-result"><strong>${r.chapterClear?'章节落幕':'江湖进展'}</strong><p>${e(ui.selected.victory)}</p></div>`:''}<div class="battle-summary-strip">本场 ${r.combat?.rounds||0} 回合 · 缴械 ${r.combat?.disarms||0} 次 · 抢夺 ${r.combat?.steals||0} 次 · 拾取 ${r.combat?.pickups||0} 次<br>投掷 ${r.combat?.throws||0} 次 · 弃械 ${r.combat?.discards||0} 次 · 绝学 ${r.combat?.arts||0} 次<br><span class="tiny muted">本场武器争夺结束，原有装备已归还。</span></div><div class="result-actions"><button class="button secondary" data-action="${r.won?'close':'result-train'}">${r.won?'先歇一小会':'去修炼一下'}</button><button class="button" data-action="${hasNext?'next-stage':'again'}">${hasNext?'挑战下一关':'再来一场'} ${icon('arrow')}</button></div><p class="result-footnote">${ui.saveError?'进度未保存，请在设置中导出备份。':r.won?'进度已保存。铜钱可以用来修炼或收集新兵器。':'失败没有额外惩罚，下一场依然满血出发。'}</p></div>`,'result');}
 function doChange(result,success){if(!result?.ok){toast(result?.message||'暂时无法操作');return false;}save();ui.battle=null;render();sound('coin');if(success)toast(success);return true;}
 function exportSave(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pet-brawl-save-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('存档已导出，换设备时可以导入继续玩。');}
-const unrestricted=new Set(['motion','sound','help','close','speed','auto','burst','skip','weapon-info','tactic','pause','disposal']);
+const unrestricted=new Set(['motion','sound','help','close','speed','auto','burst','skip','weapon-info','tactic','pause']);
 document.addEventListener('click',ev=>{const button=ev.target.closest('[data-action]');if(!button||button.disabled)return;const action=button.dataset.action,value=button.dataset.value;ev.preventDefault();if(active()&&!unrestricted.has(action)){canChange();return;}
   switch(action){
     case'nav':navigate(value);break;
@@ -123,7 +123,6 @@ document.addEventListener('click',ev=>{const button=ev.target.closest('[data-act
     case'start':case'again':startBattle();break;
     case'pause':ui.paused=!ui.paused;if(ui.paused){clearTimeout(timer);motionCancel?.pause();}else if(document.visibilityState!=='hidden'){if(ui.animating)motionCancel?.resume();else if(!ui.battle?.done)timer=setTimeout(playStep,90);}updateCombat();break;
     case'tactic':if(ui.battle?.requestTactic(value)){updateCombat();toast(({disarm:'缴械',steal:'抢夺',pickup:'拾取'}[value])+'已安排，将在下次行动生效。');}break;
-    case'disposal':if(ui.battle?.setDisposal(value)){updateCombat();toast(value==='throw'?'用满五回合后，将投掷打人。':'用满五回合后，将直接丢弃。');}break;
     case'skills-all':state.skills=SKILLS.filter(k=>k.level<=state.level).map(k=>k.id);save();render();toast('已装配全部领悟的绝学。');break;
     case'burst':if(ui.battle?.requestBurst()){updateCombat();toast('绝学蓄势，将在下次空手行动时施展！');}break;
     case'skip':closeDialog();skipBattle();break;

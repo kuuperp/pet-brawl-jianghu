@@ -1,4 +1,4 @@
-import {EXTRA_WEAPON_ART} from './weapon-illustrations.mjs?v=2.1.0';
+import {EXTRA_WEAPON_ART} from './weapon-illustrations.mjs?v=2.2.0';
 const paths={
   swords:'m5 3 16 16m-1-4-5 5M3 5l2-2 3 1-4 4-1-3zm18 0-2-2-3 1 4 4 1-3zM4 15l5 5m10-15L5 19',
   home:'m3 11 9-8 9 8M5 10v10h14V10M9 20v-6h6v6',
