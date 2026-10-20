@@ -1,4 +1,4 @@
-import {freshState,normalizeState} from './engine.mjs?v=2.4.0';
+import {freshState,normalizeState} from './engine.mjs?v=2.5.0';
 export const SAVE_KEY='pet-brawl-jianghu-v1';
 export function readProtectedSave(storage,key=SAVE_KEY){
  let raw=null;try{raw=storage.getItem(key);if(!raw)return{state:freshState(),blocked:false,recovered:false};return{state:normalizeState(JSON.parse(raw)),blocked:false,recovered:false};}

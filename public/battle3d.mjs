@@ -1,13 +1,13 @@
-import {createMeshRenderer} from './mini-gl.mjs?v=2.4.0';
-import {drawCharacter,drawWeapon,drawArena,arenaTheme} from './world-assets.mjs?v=2.4.0';
-import {CHAPTERS,weapon} from './engine.mjs?v=2.4.0';
-import {GUARD} from './fighter-rig.mjs?v=2.4.0';
-import {createCombatSequence,sampleCombat} from './combat-sequence.mjs?v=2.4.0';
-import {createMotionClock} from './motion-clock.mjs?v=2.4.0';
-import {combatSnapshot,presentationAt,sampleCombatLabels,labelLifetime,presentationDuration} from './combat-presentation.mjs?v=2.4.0';
-import {battleViewport,frontalArenaView,fighterPositions,animateFighterPositions,combatCameraFocus,ARENA_HALF_WIDTH} from './battle-layout.mjs?v=2.4.0';
-import {sampleSpectacle,drawCombatSpectacle,spectacleAnchors,createCinematicLayer} from './combat-spectacle.mjs?v=2.4.0';
-import {playCombatMotion as legacyMotion} from './combat-motion.mjs?v=2.4.0';
+import {createMeshRenderer} from './mini-gl.mjs?v=2.5.0';
+import {drawCharacter,drawWeapon,drawArena,arenaTheme} from './world-assets.mjs?v=2.5.0';
+import {CHAPTERS,weapon} from './engine.mjs?v=2.5.0';
+import {GUARD} from './fighter-rig.mjs?v=2.5.0';
+import {createCombatSequence,sampleCombat} from './combat-sequence.mjs?v=2.5.0';
+import {createMotionClock} from './motion-clock.mjs?v=2.5.0';
+import {combatSnapshot,presentationAt,sampleCombatLabels,labelLifetime,presentationDuration} from './combat-presentation.mjs?v=2.5.0';
+import {battleViewport,frontalArenaView,fighterPositions,animateFighterPositions,combatCameraFocus,ARENA_HALF_WIDTH} from './battle-layout.mjs?v=2.5.0';
+import {sampleSpectacle,drawCombatSpectacle,spectacleAnchors,createCinematicLayer} from './combat-spectacle.mjs?v=2.5.0';
+import {playCombatMotion as legacyMotion} from './combat-motion.mjs?v=2.5.0';
 const PI=Math.PI,TAU=PI*2,cap=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t;
 let current=null,previewRenderer=null,previewDisabled=false;
 const imageCache=new Map();
@@ -100,15 +100,15 @@ function artwork(key,draw,{kind='pet'}={}){
  if(imageCache.has(key))return imageCache.get(key);if(previewDisabled)return null;
  try{
   if(!previewRenderer){const canvas=document.createElement('canvas');previewRenderer=createMeshRenderer(canvas,{preserve:true});}
-  const r=previewRenderer,arena=kind==='arena';r.begin({width:arena?640:256,height:arena?310:280,background:arena?'#c8dcd3':'#eef0e4',...(arena?frontalArenaView(640,310):{camera:[0,1.65,8],target:[0,1.65,0],span:4.9})});draw(r);r.flush();const url=r.canvas.toDataURL('image/png');imageCache.set(key,url);return url;
+  const r=previewRenderer,arena=kind==='arena';r.begin({width:arena?640:384,height:arena?310:416,background:arena?'#c8dcd3':'#f4f0e5',...(arena?frontalArenaView(640,310):{camera:[0,1.65,8],target:[0,1.65,0],span:4.9})});draw(r);if(!arena)r.fit({padding:kind==='weapon'?1.18:1.12});r.flush();const url=r.canvas.toDataURL('image/png');imageCache.set(key,url);return url;
  }catch{previewDisabled=true;return null;}
 }
 export function paintArtwork(root,state,ui){
  if(!root?.querySelectorAll||typeof document.createElement!=='function')return;
  const images=root.querySelectorAll('.pet-hero-art .pet-art,.summary-art .pet-art,.pet-choice .pet-art,.stage-preview>.pet-art,.result-art .pet-art');
- for(const node of images){const svg=node.outerHTML||'',pet=svg.includes('桃桃玉兔')?'rabbit':svg.includes('糯米熊猫')?'panda':svg.includes('橘子猫侠')?'cat':'penguin',boss=node.closest?.('.stage-preview')&&ui?.towerStage%10===0,chapter=ui?.towerStage?Math.floor((ui.towerStage-1)/40):0,key='pet:'+pet+':'+!!boss+':'+(boss?chapter:0),url=artwork(key,r=>drawCharacter(r,{pet,boss:!!boss,chapter,chapterBoss:ui?.towerStage%40===0},GUARD,{scale:boss?.90:1,time:0,held:boss?CHAPTERS[chapter].bosses[Math.floor(((ui.towerStage-1)%40)/10)][2]:null}));if(url){const image=document.createElement('img');image.src=url;image.className='pet-art model-art';image.alt=node.getAttribute?.('aria-label')||'江湖小侠';node.replaceWith(image);}}
- for(const button of root.querySelectorAll('.weapon-preview')){const id=button.dataset.value,node=button.querySelector('.weapon-art'),url=artwork('weapon:'+id,r=>{r.translate(0,.85,0);r.rotateZ(-.35);drawWeapon(r,id,{scale:.95});},{kind:'weapon'});if(node&&url){const image=document.createElement('img');image.src=url;image.alt=weapon(id).name;image.className='weapon-art model-art';node.replaceWith(image);}}
- for(const target of root.querySelectorAll('[data-weapon-model]')){const id=target.dataset.weaponModel,url=artwork('weapon:'+id,r=>{r.translate(0,.85,0);r.rotateZ(-.35);drawWeapon(r,id,{scale:.95});},{kind:'weapon'});if(url){const image=document.createElement('img');image.src=url;image.alt=weapon(id).name;image.className='weapon-art model-art';target.replaceChildren(image);}}
+ for(const node of images){const svg=node.outerHTML||'',pet=svg.includes('桃桃玉兔')?'rabbit':svg.includes('糯米熊猫')?'panda':svg.includes('橘子猫侠')?'cat':'penguin',boss=node.closest?.('.stage-preview')&&ui?.towerStage%10===0,chapter=ui?.towerStage?Math.floor((ui.towerStage-1)/40):0,key='pet:'+pet+':'+!!boss+':'+(boss?chapter:0),url=artwork(key,r=>drawCharacter(r,{pet,boss:!!boss,chapter,chapterBoss:ui?.towerStage%40===0},GUARD,{scale:boss?.90:1,time:0,yaw:-.24,held:boss?CHAPTERS[chapter].bosses[Math.floor(((ui.towerStage-1)%40)/10)][2]:null}));if(url){const image=document.createElement('img');image.src=url;image.className='pet-art model-art';image.alt=node.getAttribute?.('aria-label')||'江湖小侠';node.replaceWith(image);}}
+ for(const button of root.querySelectorAll('.weapon-preview')){const id=button.dataset.value,node=button.querySelector('.weapon-art'),url=artwork('weapon:'+id,r=>{r.translate(0,.85,0);r.rotateY(-.27);r.rotateZ(-.30);drawWeapon(r,id,{scale:.95});},{kind:'weapon'});if(node&&url){const image=document.createElement('img');image.src=url;image.alt=weapon(id).name;image.className='weapon-art model-art';node.replaceWith(image);}}
+ for(const target of root.querySelectorAll('[data-weapon-model]')){const id=target.dataset.weaponModel,url=artwork('weapon:'+id,r=>{r.translate(0,.85,0);r.rotateY(-.27);r.rotateZ(-.30);drawWeapon(r,id,{scale:.95});},{kind:'weapon'});if(url){const image=document.createElement('img');image.src=url;image.alt=weapon(id).name;image.className='weapon-art model-art';target.replaceChildren(image);}}
  for(const target of root.querySelectorAll('[data-art-arena]')){const index=cap(Number(target.dataset.artArena)||0,0,19),url=artwork('arena:'+index,r=>drawArena(r,CHAPTERS[index],0),{kind:'arena'});if(url){target.style.backgroundImage=`url("${url}")`;target.classList.add('painted');}}
  mountScene3D(root,state,ui);
 }

@@ -1,11 +1,11 @@
-import {HERO_RIG,heroRoot} from './hero-rig.mjs?v=2.4.0';
+import {HERO_RIG,heroRoot} from './hero-rig.mjs?v=2.5.0';
 const PI=Math.PI,RAD=PI/180,finite=(x,f=0)=>Number.isFinite(x)?x:f;
-const GOLD='#d9b66c',INK='#22333b',FUR={roughness:.91},CLOTH={roughness:.83},LEATHER={roughness:.53},METAL={roughness:.27,metalness:.72};
+const GOLD='#d6b578',INK='#253644',FUR={roughness:.91,texture:1},CLOTH={roughness:.79,texture:2},LEATHER={roughness:.53,texture:3},METAL={roughness:.25,metalness:.78,texture:4},JADE={roughness:.20,metalness:.15,texture:6};
 export const HERO_PALETTES={
- penguin:{body:'#32596d',shade:'#244356',belly:'#f6e8cf',foot:'#d99b43',scarf:'#cc624b',eye:INK,cheek:'#df9f85',coat:'#24596a',lining:'#d4dfcf',belt:'#553e39'},
- panda:{body:'#eae5d6',shade:'#303e3e',belly:'#f4ecd8',foot:'#303e3e',scarf:'#718f69',eye:INK,cheek:'#d7a58f',coat:'#62796a',lining:'#d2c6a5',belt:'#493b31'},
- cat:{body:'#cf9558',shade:'#9b663c',belly:'#f4dbb1',foot:'#bf854b',scarf:'#a54843',eye:'#243b33',cheek:'#d59078',coat:'#314d56',lining:'#b8c6b4',belt:'#684d37'},
- rabbit:{body:'#eee0d9',shade:'#ccb9b6',belly:'#fff0df',foot:'#d6c2be',scarf:'#a9698b',eye:'#46384c',cheek:'#d99baa',coat:'#6f617c',lining:'#e8d4c7',belt:'#685063'}
+ penguin:{body:'#32596d',shade:'#244356',belly:'#f6e8cf',foot:'#d99b43',scarf:'#cc624b',eye:INK,cheek:'#df9f85',coat:'#275e78',lining:'#f0dec0',belt:'#553e39'},
+ panda:{body:'#eae5d6',shade:'#303e3e',belly:'#f4ecd8',foot:'#303e3e',scarf:'#718f69',eye:INK,cheek:'#d7a58f',coat:'#4b7a69',lining:'#e4d8b4',belt:'#493b31'},
+ cat:{body:'#cf9558',shade:'#9b663c',belly:'#f4dbb1',foot:'#bf854b',scarf:'#a54843',eye:'#243b33',cheek:'#d59078',coat:'#28545d',lining:'#d0d6b8',belt:'#684d37'},
+ rabbit:{body:'#eee0d9',shade:'#ccb9b6',belly:'#fff0df',foot:'#d6c2be',scarf:'#a9698b',eye:'#46384c',cheek:'#d99baa',coat:'#85739b',lining:'#f1dcd0',belt:'#685063'}
 };
 function shape(r,kind,color,x,y,z,sx,sy=sx,sz=sx,rz=0,material=FUR,rx=0,ry=0,alpha=1){
  r.push();r.translate(x,y,z);if(rx)r.rotateX(rx);if(ry)r.rotateY(ry);if(rz)r.rotateZ(rz);r.scale(sx,sy,sz);r.mesh(kind,color,0,alpha,'normal',material);r.pop();
@@ -14,15 +14,15 @@ const ball=(r,c,x,y,z,sx,sy=sx,sz=sx,rz=0,m=FUR)=>shape(r,'sphere',c,x,y,z,sx,sy
 function group(r,x,y,z,rz,fn){r.push();r.translate(x,y,z);if(rz)r.rotateZ(rz);fn();r.pop();}
 function band(r,c,y,radius,depth=.17){shape(r,'cylinder',c,0,y,0,radius,.04,depth,0,CLOTH);}
 function eyes(r,pet,p,profile,pose){
- const blink=finite(pose.blink),squint=Math.min(.45,finite(pose.focus)*.35),height=Math.max(.008,.058*(1-blink-squint));
+ const blink=finite(pose.blink),squint=Math.min(.45,finite(pose.focus)*.35),height=Math.max(.008,.074*(1-blink-squint));
  const eye=(x,y,z,side)=>{
   if(pet==='panda')ball(r,p.shade,x,y-.015,z-.015,.145,.19,.035,side*.17);
-  ball(r,'#f2e6cc',x,y,z+.012,.075,height+.018,.023);
-  ball(r,pet==='cat'?'#719d8a':pet==='rabbit'?'#9b7a9c':'#537a85',x+side*.012,y,z+.033,.045,height,.014);
-  ball(r,p.eye,x+side*.018,y,z+.044,pet==='cat'?.013:.023,height*.87,.009);
+  ball(r,'#fff8e7',x,y,z+.012,.087,height+.009,.024);
+  ball(r,pet==='cat'?'#719d8a':pet==='rabbit'?'#9b7a9c':'#537a85',x+side*.012,y,z+.033,.048,height*.91,.016);
+  ball(r,p.eye,x+side*.018,y,z+.044,pet==='cat'?.018:.028,height*.79,.011);
   ball(r,'#ffffff',x+side*.025,y+.023,z+.052,.012,.014,.006);
-  shape(r,'sphere',p.body,x-side*.018,y+.069,z+.022,.099,.022,.024,-side*.14,FUR);
-  shape(r,'sphere',p.eye,x+side*.005,y+.096,z+.015,.087,.013,.016,-side*(.10+finite(pose.focus)*.13));
+  shape(r,'sphere',p.body,x-side*.018,y+.085,z+.022,.099,.017,.024,-side*.04,FUR);
+  shape(r,'sphere',p.eye,x+side*.005,y+.116,z+.015,.075,.010,.013,-side*(.025+finite(pose.focus)*.13));
  };
  if(profile)eye(.31,2.69,.445,1);else for(const side of [-1,1])eye(side*.245,2.69,.473,side);
 }
@@ -56,15 +56,16 @@ function head(r,pet,p,profile,pose,time){
  }
  if(!profile){eyes(r,pet,p,false,pose);for(const side of [-1,1])ball(r,p.cheek,side*.36,2.48,.39,.073,.028,.018);}
  if(pet!=='penguin')for(const side of [-1,1])shape(r,'sphere',p.eye,side*.045,2.365,.474,.052,.012,.012,side*.18);
- shape(r,'cylinder',p.scarf,0,2.92,-.014,panda?.615:.54,.045,.395,0,CLOTH);
- shape(r,'sphere',GOLD,0,2.94,.39,.07,.075,.022,0,METAL);
+ // A fitted cloth brow band, rather than a flat cylinder slicing through the face.
+ shape(r,'brow-band',p.scarf,0,2.965,0,panda?.59:.52,.65,.38,0,CLOTH);
+ shape(r,'gem-cut',GOLD,0,2.97,.413,.043,.055,.019,0,METAL);
 }
 function legs(r,pet,p,pose,front,profile){
  const k=front?'f':'b',s=front?1:-1;
  group(r,profile?s*.06:s*.27,HERO_RIG.hip,profile?s*.28:(front?.11:-.08),-finite(pose['l'+k])*RAD,()=>{
   shape(r,'sleeve',p.coat,0,-.18,0,.205,.255,.20,0,CLOTH);ball(r,p.coat,0,-.38,0,.145,.14,.145);
   group(r,0,-HERO_RIG.thigh,0,-finite(pose['k'+k])*RAD,()=>{
-   shape(r,'sleeve',p.shade,0,-.14,0,.136,.24,.14,0,FUR);band(r,p.lining,-.265,.153,.151);band(r,p.lining,-.31,.153,.151);
+   shape(r,'sleeve',p.shade,0,-.14,0,.136,.24,.14,0,FUR);band(r,p.lining,-.265,.153,.151);band(r,p.lining,-.31,.153,.151);shape(r,'lapel',p.coat,0,-.18,.146,.075,.15,.023,0,CLOTH);
    ball(r,p.foot,profile?.17:.04,-HERO_RIG.shin,profile?0:.12,profile?.32:.22,.15,profile?.18:.29);
    shape(r,'boot',p.belt,profile?.12:.025,-.435,profile?0:.095,profile?.29:.215,.15,profile?.181:.27,0,LEATHER);
    shape(r,'sphere','#292f34',profile?.17:.04,-.548,profile?0:.12,profile?.31:.23,.045,profile?.18:.29,0,LEATHER);
@@ -81,7 +82,7 @@ function arms(r,pet,p,pose,front,held,profile,armored,drawWeapon){
    shape(r,'sleeve',p.shade,0,-.15,0,.144,.235,.145,0,FUR);band(r,p.lining,-.20,.157,.157);band(r,p.lining,-.255,.16,.16);band(r,p.scarf,-.305,.165,.165);
    ball(r,p.body,0,-HERO_RIG.forearm,0,pet==='panda'?.215:.185,pet==='panda'?.18:.16,.172);
    for(let i=0;i<3;i++)ball(r,p.body,(i-1)*.075,-.50,.10,.05,.055,.056);
-   ball(r,p.shade,.135,-.4,.1,.07,.1,.075,-.35);
+   ball(r,p.shade,.135,-.4,.1,.07,.1,.075,-.35);for(let i=0;i<3;i++)shape(r,'sphere',p.lining,(i-1)*.054,-.302,.145,.011,.023,.013,0,CLOTH);
    if(front&&held)group(r,.06,-.4,.02,(profile?PI:0)-.2+finite(pose.wrist)*RAD,()=>{r.rotateY(.12);drawWeapon(r,held,{scale:armored?.98:.79});});
   });
  });
@@ -90,16 +91,37 @@ function costume(r,pet,p,pose,time){
  const broad=pet==='panda'?1.13:pet==='rabbit'?.87:pet==='cat'?.92:1;
  shape(r,'tunic',p.coat,0,1.59,0,.52*broad,.53,.36,0,CLOTH);
  shape(r,'cylinder',p.body,0,2.12,0,.19,.16,.18,0,FUR);
- for(const side of [-1,1]){shape(r,'cloth',p.lining,side*.105,1.85,.323,.065,.235,.07,side*.43,CLOTH);shape(r,'cloth',p.coat,side*.21,1.25,.275,.22,.29,.10,side*(.12+finite(pose.cloth)*.12),CLOTH);}
- shape(r,'cylinder',p.belt,0,1.37,0,.52*broad,.075,.375,0,LEATHER);shape(r,'hero-head',GOLD,0,1.37,.391,.10,.09,.031,0,METAL);shape(r,'sphere',p.scarf,.32,1.39,.26,.13,.105,.07,0,CLOTH);
+ for(const side of [-1,1]){shape(r,'lapel',p.lining,side*.125,1.87,.343,.078,.25,.033,side*.35,CLOTH);shape(r,'cloth',p.coat,side*.21,1.25,.275,.22,.29,.10,side*(.12+finite(pose.cloth)*.12),CLOTH);}
+ shape(r,'cylinder',p.belt,0,1.37,0,.52*broad,.075,.375,0,LEATHER);shape(r,'bevel-box',GOLD,0,1.37,.391,.10,.074,.027,0,METAL);shape(r,'sphere',p.scarf,.32,1.39,.26,.13,.105,.07,0,CLOTH);
  const sway=Math.sin(time*3)*.04+finite(pose.cloth)*.18;
  for(const side of [-1,1])shape(r,'cloth',p.scarf,side*.18,1.08,.33,.095,.26,.09,side*.20+sway,CLOTH);
  if(pet==='penguin'){shape(r,'cloth',p.scarf,0,1.92,-.37,.4,.32,.14,sway,CLOTH);shape(r,'cylinder',p.scarf,0,2.09,0,.37,.075,.30,0,CLOTH);}
  else if(pet==='panda')for(const side of [-1,1]){shape(r,'cloth',p.lining,side*.29,1.65,.316,.15,.25,.10,side*.15,CLOTH);for(let i=0;i<3;i++)ball(r,'#544f3d',side*.2,1.62+i*.11,.386,.034,.027,.023);}
  else if(pet==='cat'){
-  for(let i=0;i<4;i++)group(r,-.38-i*.11,1.2-i*.06,-.31,-.4-i*.36+sway,()=>shape(r,'sleeve',i===3?p.shade:p.body,0,-.16,0,.095,.22,.10));
+  shape(r,'cat-tail',p.body,0,1.2,-.30,1,1,1,sway,FUR);
+  for(let i=0;i<3;i++)shape(r,'sphere',p.shade,Math.sin((.66+i*.11)*PI)*.2,1.2-.12*(.66+i*.11)+.25*Math.sin((.66+i*.11)*4),-.30-1.2*(.66+i*.11)+.4*(.66+i*.11)**2,.07,.055,.07,0,FUR);
   shape(r,'cloth',p.scarf,-.4,1.94,-.12,.19,.46,.14,-.4+sway,CLOTH);
  }else{ball(r,p.belly,0,1.12,-.36,.18,.18,.16);shape(r,'cloth',p.lining,0,1.56,.351,.12,.24,.06,.05,CLOTH);shape(r,'sphere',p.scarf,0,1.75,.402,.085,.085,.035,0,LEATHER);}
+ // Piping and short stitches follow the cloth panels and remain solid geometry.
+ for(const side of [-1,1]){
+  shape(r,'lapel',GOLD,side*.19,1.87,.369,.012,.245,.012,side*.35,CLOTH);
+  for(let i=0;i<4;i++)shape(r,'sphere',p.lining,side*(.30+i*.008),1.05+i*.08,.31,.013,.008,.012,0,CLOTH);
+  shape(r,'sphere',GOLD,side*.40,1.40,.263,.023,.025,.015,0,METAL);
+ }
+ if(pet==='penguin'){
+  shape(r,'bevel-box',p.lining,0,1.72,.37,.12,.16,.022,0,CLOTH);
+  for(const side of [-1,1])shape(r,'lapel',GOLD,side*.045,1.76,.4,.032,.09,.019,-side*.5,METAL);
+ }else if(pet==='panda'){
+  for(let i=0;i<9;i++){const a=(i-4)*.22;ball(r,'#70533d',Math.sin(a)*.32,2.07-Math.cos(a)*.16,.34,.038,.042,.035,0,LEATHER);}
+  shape(r,'gem-cut','#9ac4a7',0,1.76,.398,.068,.095,.025,0,JADE);
+ }else if(pet==='cat'){
+  shape(r,'lapel',p.belt,-.16,1.76,.386,.045,.36,.02,-.55,LEATHER);
+  for(let i=0;i<3;i++)shape(r,'sphere',GOLD,-.25+i*.11,1.9-i*.18,.416,.021,.025,.018,0,METAL);
+ }else{
+  for(let i=0;i<5;i++){const a=i*PI*2/5;shape(r,'lapel',p.scarf,Math.sin(a)*.07,1.74+Math.cos(a)*.07,.422,.028,.065,.014,-a,CLOTH);}
+  shape(r,'gem-cut',GOLD,0,1.74,.45,.027,.034,.019,0,METAL);
+ }
+
 }
 export function drawHero(r,fighter={},pose={},options={},hooks={}){
  const pet=HERO_PALETTES[fighter.pet]?fighter.pet:'penguin',p=HERO_PALETTES[pet],profile=options.profile==='duel',facing=options.facing===-1?-1:1;

@@ -1,11 +1,11 @@
-import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=2.4.0';
-import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,campaignFighterFor,chooseRoute,rivalsFor,stageFor,stageChallenge,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=2.4.0';
-import {icon,petArt,weaponArt} from './art.mjs?v=2.4.0';
-import {playCombatMotion,paintArtwork,destroyScene3D,syncScene3D,resumeScene3D} from './battle3d.mjs?v=2.4.0';
-import {readProtectedSave,writeProtectedSave} from './save-store.mjs?v=2.4.0';
-import {handArt} from './fighter-rig.mjs?v=2.4.0';
-import {combatSnapshot} from './combat-presentation.mjs?v=2.4.0';
-import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=2.4.0';
+import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=2.5.0';
+import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,campaignFighterFor,chooseRoute,rivalsFor,stageFor,stageChallenge,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=2.5.0';
+import {icon,petArt,weaponArt} from './art.mjs?v=2.5.0';
+import {playCombatMotion,paintArtwork,destroyScene3D,syncScene3D,resumeScene3D} from './battle3d.mjs?v=2.5.0';
+import {readProtectedSave,writeProtectedSave} from './save-store.mjs?v=2.5.0';
+import {handArt} from './fighter-rig.mjs?v=2.5.0';
+import {combatSnapshot} from './combat-presentation.mjs?v=2.5.0';
+import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=2.5.0';
 const STORE='pet-brawl-jianghu-v1';
 const root=document.querySelector('#app'),modalRoot=document.querySelector('#modal-root'),toastEl=document.querySelector('#toast');
 let loadedSave;try{loadedSave=readProtectedSave(localStorage,STORE);}catch{loadedSave={state:freshState(),blocked:true,recovered:false};}

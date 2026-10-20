@@ -1,13 +1,14 @@
 // Sculpted game assets. Every visible part is a lit 3D mesh; no billboard characters.
-import {drawHero,HERO_PALETTES} from './hero-models.mjs?v=2.4.0';
-import {ARENA_LENGTH_SCALE} from './battle-layout.mjs?v=2.4.0';
+import {drawCraftedWeapon,weaponFinishing} from './weapon-craft.mjs?v=2.5.0';
+import {drawHero,HERO_PALETTES} from './hero-models.mjs?v=2.5.0';
+import {ARENA_LENGTH_SCALE} from './battle-layout.mjs?v=2.5.0';
 const PI=Math.PI, TAU=PI*2, RAD=PI/180;
 const finite=(x,f=0)=>Number.isFinite(x)?x:f;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const hash=s=>Array.from(String(s)).reduce((a,c)=>(Math.imul(a,31)+c.charCodeAt(0))>>>0,17);
 function part(r,kind,color,x=0,y=0,z=0,sx=1,sy=sx,sz=sx,rx=0,ry=0,rz=0,light=0,alpha=1){
  const metal=[GOLD,DARK_GOLD,METAL,DARK_METAL].includes(color);
- r.push();r.translate(x,y,z);if(rx)r.rotateX(rx);if(ry)r.rotateY(ry);if(rz)r.rotateZ(rz);r.scale(sx,sy,sz);r.mesh(kind,color,light,alpha,'normal',{roughness:metal?.3:.78,metalness:metal?.65:0});r.pop();
+ r.push();r.translate(x,y,z);if(rx)r.rotateX(rx);if(ry)r.rotateY(ry);if(rz)r.rotateZ(rz);r.scale(sx,sy,sz);r.mesh(kind,color,light,alpha,'normal',{roughness:metal?.3:.78,metalness:metal?.65:0,texture:metal?4:color===WOOD?5:0});r.pop();
 }
 function group(r,x,y,z,rx,ry,rz,fn){
  r.push();r.translate(x,y,z);if(rx)r.rotateX(rx);if(ry)r.rotateY(ry);if(rz)r.rotateZ(rz);fn();r.pop();
@@ -214,7 +215,9 @@ export function drawWeapon(r,id,options={}){
  if(!id||id==='fists'||id==='burst')return;
  id=String(id);const h=hash(id),accent=options.color||SIGNATURE_MATERIALS[id]||weaponColors[h%weaponColors.length],scale=finite(options.scale,1);
  r.push();r.scale(scale,scale,scale);
- if(newSignature(r,id,accent)){
+ if(drawCraftedWeapon(r,id,accent)){
+  // Forged blades, cast fittings and carved bodies have physical surface detail.
+ }else if(newSignature(r,id,accent)){
   // Unique silhouettes use purpose-built geometry above.
  }else if(id==='bamboo'){
   rod(r,'#658e64',0,.65,0,.065,.95,.065);
@@ -268,7 +271,7 @@ export function drawWeapon(r,id,options={}){
   // Deterministic fallback still has a distinct silhouette for new equipment IDs.
   const build=[sword,spear,axe,staff,fan,ornament][h%6];build(r,id,accent);
  }
- r.pop();
+ weaponFinishing(r,id,accent);r.pop();
 }
 
 function bossArmor(r,f,p,time){

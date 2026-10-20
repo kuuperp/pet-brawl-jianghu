@@ -1,4 +1,4 @@
-import {NEW_ARTS,NEW_SKILLS} from './armory.mjs?v=2.4.0';
+import {NEW_ARTS,NEW_SKILLS} from './armory.mjs?v=2.5.0';
 // All effects are deterministic samples of the existing combat clock; no independent timers.
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const mix=(a,b,t)=>a+(b-a)*t;
