@@ -1,4 +1,4 @@
-import {weaponArt} from './art.mjs?v=1.5.1';
+import {weaponArt} from './art.mjs?v=2.0.0';
 // The battle rig is separate from portrait art. Nested elbow/knee joints move the actual limbs.
 export const GUARD={body:0,y:0,head:0,af:-28,ef:-72,ab:22,eb:-75,lf:-15,kf:15,lb:22,kb:-18};
 export const POSES={
@@ -54,7 +54,10 @@ export function fighterArt(type='penguin',{enemy=false,index=0,held=null}={}){
  return`<svg viewBox="0 0 240 260" class="fighter-art" role="img" aria-label="${{penguin:'团子企鹅',panda:'糯米熊猫',cat:'橘子猫侠',rabbit:'桃桃玉兔'}[type]}武术动作"><ellipse class="rig-shadow" cx="117" cy="246" rx="54" ry="8" fill="#53614b" opacity=".16"/><g transform="translate(116 178)"><g data-joint="body"><g transform="translate(-116 -178)" stroke="${ink}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">${leg(false)}${arm(false)}${type==='cat'?'<path d="M91 168q-40 8-31-20" stroke="#d7a166" stroke-width="12" fill="none"/>':''}<path d="M86 120q27-13 56-1l7 48q-2 26-33 28-34-1-37-27z" fill="${p.body}"/><ellipse cx="113" cy="154" rx="23" ry="28" fill="${p.belly}" stroke="none"/>${leg(true)}<g transform="translate(115 110)">${joint('head',`<g transform="translate(-115 -110)">${head}</g>`)}</g><path d="M83 111q30 12 64-2l-2 15q-30 13-61 0z" fill="${enemy?'#b89260':p.scarf}"/><path d="m91 123-21 28-2-16-12-2 25-15" fill="${enemy?'#b89260':p.scarf}"/>${arm(true)}</g></g></g></svg>`;
 }
 // Key poses include footwork before/after each strike; identical times drive impact effects.
+const ART_MOVES={"bell-palm": "palm", "forge-combo": "combo", "petal-step": "spin-kick", "falcon-dive": "flying-kick", "royal-palm": "palm", "sand-sweep": "sweep", "bronze-fist": "uppercut", "mire-hand": "heal-palm", "frost-kick": "crane-kick", "eruption-fist": "hammer-fist", "star-fingers": "finger-strike", "thunder-elbow": "elbow", "cloud-palm": "twin-palm", "dragon-shoulder": "shoulder", "dawn-strike": "punch", "celestial-wheel": "spin-kick"};
+export const canonicalMove=move=>ART_MOVES[move]||move;
 export function rigFrames(move='punch'){
+ const variant=Object.keys(ART_MOVES).indexOf(move)+1;move=canonicalMove(move);
  const sequence=[[0,'guard'],[.065,'runA'],[.13,'runB'],[.20,'runA'],[.27,'chamber'],[.34,'chamber'],[.40,'punch'],[.46,'chamber'],[.53,'punch'],[.62,'guard'],[.73,'runB'],[.81,'runA'],[.89,'runB'],[.97,'guard'],[1,'guard']];
  const pairs={uppercut:['crouch','uppercut'],'twin-palm':['chamber','twinPalm'],'low-kick':['crouch','lowKick'],'crane-kick':['jump','craneKick'],elbow:['chamber','elbow'],'hammer-fist':['smashReady','hammerFist'],'heal-palm':['guardHigh','healPalm'],'finger-strike':['chamber','fingerStrike'],thrust:['chamber','thrust'],swing:['throwReady','swing'],'staff-spin':['smashReady','slash'],slash:['chamber','slash'],smash:['smashReady','smash'],'double-slash':['smashReady','slash'],punch:['chamber','punch'],combo:['chamber','punch'],kick:['kickReady','kick'],sweep:['crouch','sweep'],'flying-kick':['jump','fly'],'flip-kick':['jump','kick'],'spin-kick':['kickReady','kick'],palm:['chamber','palm'],shoulder:['crouch','shoulder'],slam:['jump','slam'],disarm:['chamber','palm'],grab:['chamber','grab'],pickup:['guard','pickup'],throw:['throwReady','throw'],discard:['guard','pickup'],dodge:['guardHigh','dodge'],recoil:['guard','recoil']};
  const [prep,hit]=pairs[move]||pairs.punch;
@@ -66,6 +69,7 @@ export function rigFrames(move='punch'){
    const pose={...GUARD,...POSES[name]};
    if(move==='flip-kick'){if(offset===.34)pose.body=-135;else if(offset===.40)pose.body=-300;else if(offset>=.46)pose.body-=360;}
    if(move==='spin-kick'&&offset===.53){[pose.lf,pose.lb]=[-25,-100];[pose.kf,pose.kb]=[20,0];pose.body=16;}
+   if(variant&&offset>=.27&&offset<=.62){pose.body+=(variant%5-2)*3;pose.y-=Math.floor(variant/4)*2;pose.af+=variant*.65;pose.ab-=variant*1.2;pose.ef+=(variant%3-1)*5;}
    return{offset,pose};
  });
 }

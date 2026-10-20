@@ -1,3 +1,4 @@
+import {NEW_WEAPONS} from './armory.mjs?v=2.0.0';
 export const EXTRA_WEAPON_ART={
  chain:'<path d="m23 85 13-27" stroke="#aa805a" stroke-width="9"/><path d="M35 59q-12-34 20-31" fill="none" stroke="#778982" stroke-width="4"/><circle cx="69" cy="30" r="18" fill="#c9a46b"/><path d="m60 14 6 17-9 11m18-27-6 16 10 12m-26-14h34" fill="none" stroke="#927651"/>',
  spear:'<path d="m23 89 41-57" stroke="#ae855d" stroke-width="7"/><path d="m56 34 20-25 1 33-13-7-6 7z" fill="#b9d0cf"/><path d="m62 38-15 9 8 12 8-21" fill="#cc7866"/><path d="m67 30 7-14" stroke="#eef6e1"/>',
@@ -16,3 +17,19 @@ export const EXTRA_WEAPON_ART={
  blade:'<path d="m23 86 14-21 11 8-16 20z" fill="#7d8e88"/><path d="m31 60 22 16" stroke="#d4b36d" stroke-width="9"/><path d="m39 62 27-45 20-6-1 23-34 37z" fill="#aec1b6"/><path d="m46 62 30-41" stroke="#e5e5c9" stroke-width="5"/><path d="m53 49 10 6" stroke="#c8a963" stroke-width="4"/>',
  orb:'<circle cx="51" cy="49" r="30" fill="#9aaeb4"/><circle cx="51" cy="49" r="23" fill="#e8dec0"/><path d="m51 23 6 19 20 7-20 7-6 18-7-18-18-7 18-7z" fill="#b4a3c7"/><circle cx="51" cy="49" r="8" fill="#d6b46e"/><path d="m28 72-10 14m56-14 10 14" stroke="#c29c62" stroke-width="5"/><circle cx="51" cy="9" r="3" fill="#d6b46e"/><circle cx="90" cy="49" r="3" fill="#d6b46e"/>'
 };
+
+// Compact UI glyphs use the same weapon categories as the mesh models.
+for(const [index,w]of NEW_WEAPONS.entries()){
+ const hue=['#94bca2','#dbab73','#a99ac9','#83bdc9','#df997a','#c7b271'][index%6],metal='#d9e6de',ink='#496163';
+ let glyph='';
+ if(/bow/.test(w.id))glyph=`<path d="M29 15Q91 49 29 86L40 50Z" fill="${hue}"/><path d="M29 15v71M18 64l60-39m-3 0 10-6-5 12" fill="none" stroke="${ink}" stroke-width="3"/>`;
+ else if(/cannon/.test(w.id))glyph=`<path d="m20 66 43-39 24 26-43 39Z" fill="${hue}"/><ellipse cx="76" cy="40" rx="16" ry="22" transform="rotate(-45 76 40)" fill="${ink}"/><ellipse cx="76" cy="40" rx="9" ry="14" transform="rotate(-45 76 40)" fill="#e5ca8d"/>`;
+ else if(/shield|seal|orb|beads|lantern|bell/.test(w.id))glyph=`<path d="M50 13 82 27 76 65 50 91 23 65 18 27Z" fill="${hue}"/><path d="M50 24 70 34 64 61 50 77 34 61 29 34Z" fill="${metal}"/><circle cx="50" cy="48" r="11" fill="${hue}"/><path d="M50 32v32M34 48h32" stroke="#f2d58d" stroke-width="4"/>`;
+ else if(/fan|feather|ribbon/.test(w.id))glyph=`<path d="M50 82 13 34Q50-4 88 34Z" fill="${hue}"/><path d="M50 82 30 24M50 82V16M50 82l20-58" stroke="${metal}" stroke-width="4"/><circle cx="50" cy="82" r="7" fill="#b18750"/>`;
+ else if(/axe|hammer|gauntlet/.test(w.id))glyph=`<path d="m24 88 43-58" stroke="#956f4d" stroke-width="8"/><path d="m43 28 13-14 31 20-10 22-24-8Z" fill="${hue}"/><path d="m48 31 28 18" stroke="${metal}" stroke-width="5"/>`;
+ else glyph=`<path d="m25 87 40-55" stroke="#9d7955" stroke-width="9"/><path d="M44 53 73 10 84 33 58 65Z" fill="${metal}"/><path d="M47 54 69 27 67 47Z" fill="${hue}"/><path d="m39 56 24 17" stroke="${hue}" stroke-width="7"/>${/twin|halberd|spear|whip|scythe/.test(w.id)?`<path d="M49 30 78 16 87 31 64 51" fill="none" stroke="${hue}" stroke-width="6"/>`:''}`;
+ if(/lantern/.test(w.id))glyph=`<path d="M37 28V16q13-16 26 0v12" fill="none" stroke="#96754f" stroke-width="5"/><rect x="25" y="28" width="50" height="49" rx="12" fill="${hue}"/><path d="M39 32v39m22-39v39" stroke="${metal}" stroke-width="4"/><circle cx="50" cy="52" r="11" fill="#fff0ac"/><path d="m39 78-6 12m17-12v15m12-15 6 12" stroke="${hue}" stroke-width="4"/>`;
+ if(/lava/.test(w.id))glyph+=`<path d="m49 42 6-28 7 16 16-21-8 34" fill="none" stroke="#eaa175" stroke-width="4"/>`;
+ if(/dawn/.test(w.id))glyph+=`<path d="M76 9v-7m9 16 8-4m-8 16 8 4M58 9l-6-6" stroke="#e0bc66" stroke-width="3"/>`;
+ EXTRA_WEAPON_ART[w.id]=glyph+`<circle cx="17" cy="17" r="${3+index%4}" fill="${hue}"/>`;
+}

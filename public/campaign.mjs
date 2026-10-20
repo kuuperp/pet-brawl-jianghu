@@ -1,6 +1,7 @@
+import {NEW_CHAPTERS,ARENA_NAMES,ARENA_THEMES,CHAPTER_COLORS,CHAPTER_BEATS,ENCOUNTER_RULES} from './chronicles.mjs?v=2.0.0';
 export const STAGES_PER_CHAPTER=40;
-export const MAX_LEVEL=80;
-export const CHAPTERS=[
+export const MAX_LEVEL=300;
+const ORIGINAL_CHAPTERS=[
  {name:'竹林初见',sub:'追回失镖，寻回第一封侠义帖',color:'#6d927a',clue:'青竹镖印',ending:'守林熊交出了镖印：幕后买家正在烟火巷收购各派信物。',
   regions:[['青竹入口','村口镖车失踪，你沿着断裂的车辙进入竹林。','巡林','发现镖车残页'],['风铃渡口','渡口的风铃暗号，指向一支假扮镖师的队伍。','渡口','追回被调包的镖箱'],['旧祠山径','旧祠里藏着赃物账簿，山径上的哨兵轮流守夜。','山径','找出账簿的主人'],['竹海深处','守林熊认定你是窃镖者，只有赢下比试才能当面澄清。','竹海','把镖印交回镖局']],
   bosses:[['竹哨阿橘','cat','fan','focus','快刀会心'],['渡口铁团','panda','pan','iron','铁锅护体'],['青叶双影','rabbit','nunchaku','wind','双影闪躲'],['守林大宗熊','panda','umbrella','oak','玄甲守林']],rewards:['pan','fan','nunchaku','umbrella']},
@@ -17,11 +18,15 @@ export const CHAPTERS=[
   regions:[['群侠初会','受困的弟子为你作证，但擂台幕后之人拒绝交出最后一枚信物。','初会','赢得公开质证的资格'],['风雷会场','雷鼓一响便不准退场，五派高手正在替幕后之人试探你的底牌。','会场','击破风雷会场的守关人'],['山河决胜','所有证词已经齐备，唯有夺冠才能让盟主当众回应指控。','决胜','夺下进入最终擂台的席位'],['归元之巅','乐斗盟主承认了密契，却坚称只有强者才能定义侠义。最后一战由你作答。','巅峰','击败盟主并归还五派信物']],
   bosses:[['莲灯守心师','rabbit','lotus','breath','莲灯长春'],['风雷鼓尊','penguin','drum','ironwill','雷火定神'],['山河剑魁','panda','blade','ruthless','重剑破阵'],['归元乐斗盟主','penguin','orb','laststand','涅槃归元']],rewards:['lotus','drum','blade','orb']}
 ];
+export const CHAPTERS=[...ORIGINAL_CHAPTERS,...NEW_CHAPTERS].map((c,index)=>({...c,index,color:CHAPTER_COLORS[index],arena:ARENA_NAMES[index],arenaTheme:ARENA_THEMES[index],act:Math.floor(index/5)+1}));
+CHAPTERS[4].ending+=' 当夜，云钟寺传来急信：密契的来历另有隐情。';
 export const TOTAL_STAGES=CHAPTERS.length*STAGES_PER_CHAPTER;
 const ROLES=['探路小侠','巡游拳客','机灵斥候','护路镖手','铁衣守卫','游身刀客','伏路高手','领路教头','关前先锋'];
 const BEATS=['入口处传来争执声，先替赶路人解围。','留下的脚印突然分岔，巡游者拦住了你的询问。','一位斥候想抢先报信，你必须追上他。','护路镖手认错了暗号，打过一场才能核实身份。','铁衣守卫拒绝让路，正面破阵的时刻到了。','刀客提出公平切磋，胜者可以带走下一条线索。','伏路高手现身，原来你的行踪早已泄露。','教头率众封锁要道，距离真相只差这道关卡。','关前先锋发起最后的试探，守关人就在前方。'];
 export function campaignStage(value){
  const stage=Math.max(1,Math.min(TOTAL_STAGES,Math.floor(Number(value)||1))),chapter=Math.floor((stage-1)/STAGES_PER_CHAPTER),localStage=(stage-1)%STAGES_PER_CHAPTER+1,segment=Math.floor((localStage-1)/10),position=(localStage-1)%10;
  const c=CHAPTERS[chapter],region=c.regions[segment],boss=position===9,chapterBoss=localStage===STAGES_PER_CHAPTER,[name,pet,signature,trait,traitName]=c.bosses[segment];
- return{stage,chapter,localStage,segment,boss,chapterBoss,name:boss?name:region[2]+ROLES[position],pet:boss?pet:['panda','cat','rabbit','penguin'][(stage+segment)%4],signature:boss?signature:null,trait:boss?trait:null,traitName:boss?traitName:null,region:region[0],goal:region[3],story:region[1]+' '+(boss?`「${name}」挡在终点。击败对手，才能${region[3]}。`:BEATS[position]),victory:chapterBoss?c.ending:boss?`你成功${region[3]}，新的线索指向下一段旅途。`:'道路已经打开，继续追寻这条线索。',reward:boss?c.rewards[segment]:null};
+ const encounter=boss?'boss':position===4?'elite':position===6?'ambush':position===8?'trial':'normal',rule=ENCOUNTER_RULES[encounter]||ENCOUNTER_RULES.normal;
+ const beat=CHAPTER_BEATS[chapter]?.[position]||BEATS[position];
+ return{stage,chapter,localStage,segment,boss,chapterBoss,encounter,rule,arena:c.arena,arenaTheme:c.arenaTheme,name:boss?name:region[2]+(encounter==='elite'?'护阵精英':encounter==='ambush'?'伏击暗哨':encounter==='trial'?'决胜先锋':ROLES[position]),pet:boss?pet:['panda','cat','rabbit','penguin'][(stage+segment)%4],signature:boss?signature:null,trait:boss?trait:null,traitName:boss?traitName:null,region:region[0],goal:region[3],story:region[1]+' '+(boss?`「${name}」已经披甲登台。击破其蓄力与护甲，才能${region[3]}。`:beat+' '+(encounter==='normal'?'':rule.desc)),victory:chapterBoss?c.ending:boss?`你成功${region[3]}，获得「${c.clue}」的新线索。`:['被堵住的道路重新开放。','你收好了沿途留下的证物。','报信的路线已被截断。','误会解除，对方指出了下一处线索。','精英护阵被击破，这段道路可以安全通过。','新的证词与你掌握的线索相互印证。','伏击已经解除，你护住了身后的同行者。','试探结束，守关人的招式终于露出端倪。','决胜先锋退下，真正的守关人就在前方。'][position],reward:boss?c.rewards[segment]:null};
 }

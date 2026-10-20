@@ -7,12 +7,12 @@ const f=fighterFor(freshState());
 function event(art,actor=0){const b=new Battle(f,f,()=>.5);b.actor=actor;return{...b.step(),kind:'martial',artId:art.id,name:art.name,move:art.move,hits:art.hits||1,dodged:false};}
 function recording(){const log=[];return{log,ctx:new Proxy({createRadialGradient(...args){log.push(['gradient',...args]);return{addColorStop(...a){log.push(['color',...a]);}};}},{get:(o,k)=>k in o?o[k]:(...args)=>{assert.ok(args.every(v=>typeof v!=='number'||Number.isFinite(v)),k+' must be finite');log.push([k,...args]);},set:(o,k,v)=>{o[k]=v;log.push(['set',k,v]);return true;}})};}
 const layout=(width)=>({width,height:354,fighters:[{x:width*.2,top:164,width:width<500?90:126,height:width<500?98:137},{x:width*.8,top:164,width:width<500?90:126,height:width<500?98:137}],ground:{x:width/2,y:294}});
-test('All 16 martial arts, four ultimates and 20 passives have visual identities; rendered signatures differ',()=>{
- assert.equal(MARTIAL_ARTS.length,16);assert.equal(Object.keys(BURST_FX).length,4);
+test('All 32 martial arts, four ultimates and 40 passives have visual identities; rendered signatures differ',()=>{
+ assert.equal(MARTIAL_ARTS.length,32);assert.equal(Object.keys(BURST_FX).length,4);
  for(const skill of SKILLS)assert.ok(PASSIVE_FX[skill.id],skill.name);
  const signatures=new Set();
  for(const art of MARTIAL_ARTS){assert.ok(ART_FX[art.id],art.name);const e=event(art),seq=createCombatSequence(e,layout(800)),time=seq.t.duration*.44,v=sampleCombat(seq,time),r=recording();drawBattleEffects(r.ctx,seq,v,time);assert.ok(r.log.length>200);signatures.add(JSON.stringify(r.log));}
- assert.equal(signatures.size,16);
+ assert.equal(signatures.size,32);
 });
 test('Effects sample identically for the same time, never hit before contact, and stay finite on mobile and mirrored attacks',()=>{
  for(const width of [320,800])for(const actor of [0,1])for(const art of MARTIAL_ARTS){const seq=createCombatSequence(event(art,actor),layout(width));

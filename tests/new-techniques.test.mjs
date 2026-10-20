@@ -30,6 +30,6 @@ test('Every named new art is selectable without a usage cap and its drain, stun 
  for(let i=0;i<MARTIAL_ARTS.length;i++){
   const art=MARTIAL_ARTS[i];let call=0;const rng=()=>call++===0?(i+.01)/MARTIAL_ARTS.length:.01;
   const b=new Battle(fighter([],{weapons:[]}),fighter(),rng);b.actor=0;b.fighters[0].hp-=500;
-  const e=b.step();assert.equal(e.name,art.name);assert.equal(e.move,art.move);assert.equal(e.kind,'martial');assert.ok(e.damage>0);if(art.drain)assert.ok(e.heal>0);if(art.stun)assert.equal(e.stun,true);if(art.burn)assert.equal(b.fighters[1].burn,art.burn);assert.equal(b.fighters[0].held,null);
+  const e=b.step();assert.equal(e.name,art.name);assert.equal(e.move,art.move);assert.equal(e.kind,'martial');assert.ok(e.damage>0);if(art.drain)assert.ok(e.heal>0);if(art.stun)assert.equal(e.stun,true);if(art.burn)assert.equal(b.fighters[1].burn,Math.round(art.burn+b.fighters[0].atk*.04));assert.equal(b.fighters[0].held,null);
  }
 });

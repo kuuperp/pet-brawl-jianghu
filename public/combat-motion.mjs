@@ -1,8 +1,8 @@
-import {createBattleVfx} from './combat-vfx.mjs?v=1.5.1';
-import {weaponArt} from './art.mjs?v=1.5.1';
-import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=1.5.1';
-import {createMotionClock} from './motion-clock.mjs?v=1.5.1';
-import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=1.5.1';
+import {createBattleVfx} from './combat-vfx.mjs?v=2.0.0';
+import {weaponArt} from './art.mjs?v=2.0.0';
+import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=2.0.0';
+import {createMotionClock} from './motion-clock.mjs?v=2.0.0';
+import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=2.0.0';
 export {motionTiming,contactDistance};
 const STAR='<svg viewBox="0 0 100 100" aria-hidden="true"><path d="m50 1 11 31 29-17-15 29 25 10-30 10 13 29-27-20-15 27-5-34L3 72l20-26L1 26l33 4z" fill="currentColor"/><path d="m50 25 5 19 19 5-19 6-5 20-6-20-18-6 18-5z" fill="#fffcdd"/></svg>';
 // Everything on screen is sampled from one clock. SVG attributes avoid independent CSS/WAAPI timelines.

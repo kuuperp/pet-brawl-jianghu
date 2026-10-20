@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync,readdirSync} from 'node:fs';
-const root=new URL('../',import.meta.url),dist=new URL('public/',root);
+const root=new URL('../',import.meta.url),dist=new URL('dist/',root);
 test('Published entry point and complete module graph use a single release key',()=>{
  const {version}=JSON.parse(readFileSync(new URL('package.json',root),'utf8'));
  const html=readFileSync(new URL('index.html',dist),'utf8');

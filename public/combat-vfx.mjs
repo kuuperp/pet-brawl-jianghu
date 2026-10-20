@@ -1,3 +1,4 @@
+import {NEW_ARTS,NEW_SKILLS} from './armory.mjs?v=2.0.0';
 // All effects are deterministic samples of the existing combat clock; no independent timers.
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -22,7 +23,10 @@ export const ART_FX={
 export const BURST_FX={penguin:{shape:'ice',color:'#8eeaff',name:'冰山小拳拳'},panda:{shape:'mountain',color:'#edcc80',name:'泰山压顶抱'},cat:{shape:'claws',color:'#ffa86b',name:'喵喵连环爪'},rabbit:{shape:'rain',color:'#ffaec8',name:'萝卜流星雨'}};
 // Passive seals are shown when their actual benefit applies, not advertised as separate attacks.
 export const PASSIVE_FX={wind:['风','#8ce9d4'],focus:['会','#ffd582'],iron:['钟','#f9d481'],fury:['怒','#ffab78'],thorns:['棘','#c7a4ff'],renew:['愈','#9debc0'],comeback:['逆','#ff977e'],leech:['元','#adf2c7'],keen:['明','#ffedac'],piercing:['破','#8fdcfa'],oak:['木','#b4da95'],flow:['流','#9be2f0'],ward:['山','#ded0a0'],breath:['春','#a4edb4'],ironwill:['清','#abc9ff'],ruthless:['追','#a9eddf'],momentum:['叠','#96cfff'],borrow:['摘','#cbb1ff'],laststand:['生','#ffd4a2'],clearsky:['虚','#d1bbff']};
+for(const art of NEW_ARTS)ART_FX[art.id]={shape:art.fx,color:art.color,name:art.name};
+for(const [i,skill]of NEW_SKILLS.entries())PASSIVE_FX[skill.id]=[skill.name[0],['#badbbf','#e4c78a','#bdb4e3','#9ad7e3'][i%4]];
 export function profileFor(e){
+ if(e.bossSkill)return{shape:e.bossSkill.kind,color:e.bossSkill.color,name:e.bossSkill.name};
  if(e.kind==='burst')return BURST_FX[e.before[e.actor].pet]||BURST_FX.penguin;
  if(e.kind==='martial')return ART_FX[e.artId]||Object.values(ART_FX).find(v=>v.name===e.name)||ART_FX['cloud-fists'];
  if(e.before[e.actor].relic&&e.kind==='attack')return{shape:'celestial',color:'#dcb2ff',name:'无极天印'};
@@ -42,6 +46,7 @@ export function passiveCues(e){
  add('ruthless',a,hit&&B.hp<B.maxHp*.3);add('momentum',a,e.notes?.some(n=>n.includes('三叠浪')));
  add('borrow',a,['steal','disarm'].includes(e.kind)&&e.tacticSuccess);add('clearsky',a,art&&hit);
  for(const r of e.revives||[])add('laststand',r.who,true);
+ add('comboheart',a,hit&&e.hits>1);add('bloodpact',a,e.heal>0&&A.hp<A.maxHp*.4);add('emberheart',a,e.notes?.some(n=>n.includes('灼烧')));add('shieldflow',a,e.notes?.some(n=>n.includes('护盾')));add('counterflow',b,e.counter>0);add('riposte',a,hit&&!!B.bossCharge);add('bareheart',a,art&&!A.held&&hit);add('weaponmaster',a,hit&&e.kind==='attack'&&!!A.held);add('tactician',a,['steal','disarm'].includes(e.kind)&&e.tacticSuccess);add('calmheart',a,attack);add('executioner',a,hit&&B.hp<B.maxHp*.2);add('regenheart',a,e.heal>0&&A.hp<A.maxHp*.5);add('stormstep',b,e.dodged);add('iceguard',b,e.crit);add('burnmaster',a,hit&&B.burnTurns>0);add('lifebloom',a,e.heal>0);add('piercemaster',a,hit);add('battlefocus',a,e.crit&&A.rage>=100);add('resolve',b,hit&&B.hp<B.maxHp*.3);add('celestial',a,e.kind==='burst');
  return list;
 }
 export function vfxFrame(s,v,time){

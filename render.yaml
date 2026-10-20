@@ -17,7 +17,16 @@ services:
       - path: /app.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
+      - path: /armory.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
       - path: /art.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /battle3d.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /bosses.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
       - path: /campaign-view.mjs
@@ -26,10 +35,19 @@ services:
       - path: /campaign.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
+      - path: /chronicles.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
       - path: /combat-motion.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
+      - path: /combat-rules.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
       - path: /combat-sequence.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /combat-vfx.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
       - path: /engine.mjs
@@ -41,7 +59,16 @@ services:
       - path: /fighter-rig.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
+      - path: /mini-gl.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
       - path: /motion-clock.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /relics.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /save-store.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
       - path: /views.mjs
@@ -50,9 +77,6 @@ services:
       - path: /weapon-illustrations.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8
-      - path: /relics.mjs
-        name: Content-Type
-        value: text/javascript; charset=utf-8
-      - path: /combat-vfx.mjs
+      - path: /world-assets.mjs
         name: Content-Type
         value: text/javascript; charset=utf-8

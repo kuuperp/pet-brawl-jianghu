@@ -1,4 +1,4 @@
-import {GUARD,POSES,rigFrames} from './fighter-rig.mjs?v=1.5.1';
+import {GUARD,POSES,rigFrames,canonicalMove} from './fighter-rig.mjs?v=2.0.0';
 const cap=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
 const ease=t=>{t=cap(t);return t*t*(3-2*t);};
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -32,9 +32,9 @@ export function actionPose(sequence,p){
  return pose;
 }
 export function createCombatSequence(event,layout){
- const A=layout.fighters[event.actor],B=layout.fighters[event.target],dir=event.actor===0?1:-1,move=event.move||'punch',t=motionTiming(event);
+ const A=layout.fighters[event.actor],B=layout.fighters[event.target],dir=event.actor===0?1:-1,move=canonicalMove(event.move||'punch'),t=motionTiming(event);
  const status=['stunned','burn'].includes(event.kind),stationary=status||['throw','discard'].includes(event.kind),pickup=event.kind==='pickup';
- const frames=rigFrames(move),sequence={event,layout,A,B,dir,move,t,frames,stationary,status,pickup};
+ const frames=rigFrames(event.move||move),sequence={event,layout,A,B,dir,move,t,frames,stationary,status,pickup};
  const part=move==='combo'?'hand':['kick','sweep','flying-kick','flip-kick','spin-kick','low-kick','crane-kick'].includes(move)?'foot':move==='elbow'?'elbow':['shoulder','slam'].includes(move)?'body':'hand';
  sequence.part=part;sequence.aim=['sweep','low-kick'].includes(move)?'low':['kick','flying-kick','flip-kick','spin-kick','crane-kick'].includes(move)?'head':'body';
  const target=worldPoint(B,GUARD,sequence.aim,{x:0,y:0},-dir),reach=worldPoint(A,keyedPose(frames,.4),part,{x:0,y:0},dir);
