@@ -16,6 +16,7 @@ export function createMotionClock({duration,rate=1,cues=[],onFrame=()=>{},onCue=
   pause(){if(stopped||paused)return;cancelFrame();advance(d.now());paused=true;},
   resume(){if(stopped||!paused)return;paused=false;last=d.now();schedule();},
   setRate(value){if(!paused&&!stopped)advance(d.now());rate=speed(value);},
+  extendTo(value){if(Number.isFinite(value))duration=Math.max(duration,value);},
   cancel(){stopped=true;cancelFrame();},
   get elapsed(){return elapsed;},get paused(){return paused;},get done(){return stopped;},get rate(){return rate;}
  };

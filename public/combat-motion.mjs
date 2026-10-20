@@ -1,8 +1,9 @@
-import {createBattleVfx} from './combat-vfx.mjs?v=2.0.0';
-import {weaponArt} from './art.mjs?v=2.0.0';
-import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=2.0.0';
-import {createMotionClock} from './motion-clock.mjs?v=2.0.0';
-import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=2.0.0';
+import {createBattleVfx} from './combat-vfx.mjs?v=2.0.1';
+import {weaponArt} from './art.mjs?v=2.0.1';
+import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=2.0.1';
+import {createMotionClock} from './motion-clock.mjs?v=2.0.1';
+import {sampleCombatLabels,labelLifetime,presentationDuration} from './combat-presentation.mjs?v=2.0.1';
+import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=2.0.1';
 export {motionTiming,contactDistance};
 const STAR='<svg viewBox="0 0 100 100" aria-hidden="true"><path d="m50 1 11 31 29-17-15 29 25 10-30 10 13 29-27-20-15 27-5-34L3 72l20-26L1 26l33 4z" fill="currentColor"/><path d="m50 25 5 19 19 5-19 6-5 20-6-20-18-6 18-5z" fill="#fffcdd"/></svg>';
 // Everything on screen is sampled from one clock. SVG attributes avoid independent CSS/WAAPI timelines.
@@ -12,8 +13,8 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
  // simplifies it; a system preference must not silently remove every move and projectile.
  let reduced=motion==='reduced';
  const bodies=fighters.map(f=>f?.querySelector('.fighter-inner')),rigs=fighters.map(bindRig),hands=[0,1].map(i=>document.querySelector('#held-'+i)),shadows=fighters.map(f=>f?.querySelector('.rig-shadow'));
- const created=[],fx=(cls,html='')=>{if(!layer)return null;const n=document.createElement('div');n.className='combat-effect '+cls;n.innerHTML=html;layer.append(n);created.push(n);return n;};
- const projectile=fx('flying-weapon'),aura=fx('ultimate-aura pet-'+event.before[event.actor].pet),sparks=[fx('hit-spark',STAR),fx('hit-spark',STAR)],labels=Array.from({length:10},()=>fx('timeline-label'));
+ const created=[],fx=(cls,html='')=>{if(!layer)return null;const n=document.createElement('div');n.className='combat-effect '+cls;n.innerHTML=html;n.style.opacity='0';layer.append(n);created.push(n);return n;};
+ const projectile=fx('flying-weapon'),aura=fx('ultimate-aura pet-'+event.before[event.actor].pet),sparks=[fx('hit-spark',STAR),fx('hit-spark',STAR)];
  const pickedFloor=event.weaponEvent?.kind==='pickup'?document.querySelector('#ground-weapons')?.querySelector('.floor-weapon'):null;
  let clock,cleaned=false,projectileId=null;
  function layout(){
@@ -27,6 +28,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
  }
  const visualEffects=createBattleVfx(layer);
  let sequence=createCombatSequence(event,layout());
+ const labels=sequence.labels.map(()=>fx('timeline-label')),lifetimes=new Map();let lifetime=labelLifetime(speed);
  const actor=event.actor,target=event.target;
  const initialWeapon=['martial','burst','stunned','burn','pickup'].includes(event.kind)?event.before[actor].held:event.weapon;
  if(hands[actor])hands[actor].innerHTML=handArt(initialWeapon);
@@ -36,6 +38,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
  function render(time){
   if(cleaned)return;
   const v=sampleCombat(sequence,time),pose=reduced?GUARD:v.pose,targetPose=reduced?GUARD:v.targetPose;
+  v.labels=sequence.labels.flatMap(label=>{if(time>=label.time&&!lifetimes.has(label.id))lifetimes.set(label.id,lifetime);return sampleCombatLabels([label],time,lifetimes.get(label.id)||lifetime);});
   visualEffects.render(sequence,v,time,reduced);
   applyRigPose(rigs[actor],pose);applyRigPose(rigs[target],targetPose);
   if(fighters[actor])fighters[actor].style.transform=reduced?'':`translate(${v.position.x}px,${v.position.y}px)`;
@@ -48,14 +51,14 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
   if(v.projectile&&!reduced){if(projectileId!==v.projectile.weapon){if(projectile)projectile.innerHTML=weaponArt(v.projectile.weapon);projectileId=v.projectile.weapon;}place(projectile,v.projectile,{size:v.projectile.size,angle:v.projectile.angle,opacity:v.projectile.opacity});}else hide(projectile);
   if(v.aura&&!reduced)place(aura,v.aura,{size:v.aura.size,opacity:v.aura.opacity});else hide(aura);
   sparks.forEach((n,i)=>{const s=v.sparks[i];if(s&&!reduced)place(n,s,{size:s.size,angle:s.angle,scale:.5+s.age/220,opacity:s.opacity});else hide(n);});
-  labels.forEach((n,i)=>{const l=v.labels[i];if(!n)return;if(!l){hide(n);return;}const box=sequence.layout.fighters[l.who],offset=l.who===actor?v.position:v.targetPosition;n.textContent=l.text;n.className='combat-effect timeline-label '+l.kind;place(n,{x:box.x+(reduced?0:offset.x),y:box.top+15+(l.kind==='shield'?24:0)-(reduced?0:l.age*.05)},{size:140,opacity:l.opacity});n.style.height='24px';});
+  labels.forEach((n,i)=>{const l=v.labels.find(label=>label.id===i);if(!n)return;if(!l){hide(n);return;}const box=sequence.layout.fighters[l.who],offset=l.who===actor?v.position:v.targetPosition;n.textContent=l.text;n.className='combat-effect timeline-label '+l.kind;place(n,{x:box.x+(reduced?0:offset.x)+(l.part?22:-12),y:box.top+15+l.lane*24+l.part*22-(reduced?0:l.rise)},{size:140,opacity:l.opacity});n.style.height='24px';});
  }
  function clear(){if(cleaned)return;cleaned=true;visualEffects.destroy();if(pickedFloor)pickedFloor.style.opacity='1';for(const n of created)n.remove();fighters.forEach((f,i)=>{f?.classList.remove('motion-active','motion-target');if(f)f.style.transform='';if(bodies[i])bodies[i].style.transform='';applyRigPose(rigs[i],GUARD);if(shadows[i]){shadows[i].setAttribute('transform','');shadows[i].style.opacity='';}if(hands[i])hands[i].style.opacity='1';});window.removeEventListener?.('resize',resize);}
  function resize(){if(cleaned)return;sequence=createCombatSequence(event,layout());render(clock?.elapsed||0);}
  window.addEventListener?.('resize',resize);
- clock=createMotionClock({duration:sequence.t.duration,rate:speed,cues:sequence.cues,driver,onFrame:render,onCue(cue){if(cue.kind==='impact')onImpact(event.hits>1&&!event.dodged&&cue.part===1?.5:1);else onTransfer();},onFinish(){clear();onFinish();}});
+ clock=createMotionClock({duration:presentationDuration(sequence,sequence.labels,lifetime),rate:speed,cues:sequence.cues,driver,onFrame:render,onCue(cue){if(cue.kind==='impact')onImpact(event.hits>1&&!event.dodged&&cue.part===1?.5:1);else onTransfer();},onFinish(){clear();onFinish();}});
  const cancel=()=>{clock.cancel();clear();};
- cancel.pause=()=>clock.pause();cancel.resume=()=>clock.resume();cancel.setRate=rate=>clock.setRate(rate);
+ cancel.pause=()=>clock.pause();cancel.resume=()=>clock.resume();cancel.setRate=rate=>{lifetime=labelLifetime(rate);clock.extendTo(Math.max(sequence.t.duration,...sequence.labels.map(label=>label.time+(lifetimes.get(label.id)||lifetime))));clock.setRate(rate);};
  cancel.setMotion=value=>{reduced=value==='reduced';render(clock.elapsed);};
  Object.defineProperty(cancel,'elapsed',{get:()=>clock.elapsed});
  return cancel;

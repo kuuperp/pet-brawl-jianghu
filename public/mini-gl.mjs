@@ -6,6 +6,9 @@ const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
 const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
 export function lookAt(eye,target){const z=unit(eye.map((x,i)=>x-target[i])),x=unit(cross([0,1,0],z)),y=cross(z,x);return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,eye),-dot(y,eye),-dot(z,eye),1]);}
 export function orthographic(width,height,near=.1,far=100){return new Float32Array([2/width,0,0,0,0,2/height,0,0,0,0,-2/(far-near),0,0,0,-(far+near)/(far-near),1]);}
+export function perspective(fov,aspect,near=.1,far=100){const f=1/Math.tan(fov/2),n=1/(near-far);return new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*n,-1,0,0,2*far*near*n,0]);}
+export function cameraMatrix({camera,target,span=18,fov},width,height){return multiply(fov?perspective(fov,width/height):orthographic(span,span*height/width),lookAt(camera,target));}
+export function projectPoint(matrix,point,width,height){const p=[...point,1],clip=Array.from({length:4},(_,row)=>p.reduce((sum,v,i)=>sum+v*matrix[i*4+row],0)),w=clip[3]||1;return{x:(clip[0]/w+1)*width/2,y:(1-clip[1]/w)*height/2,depth:clip[2]/w,visible:clip[3]>0&&Math.abs(clip[0])<=w&&Math.abs(clip[1])<=w};}
 function normals(m){
  const a=m[0],b=m[4],c=m[8],d=m[1],e=m[5],f=m[9],g=m[2],h=m[6],i=m[10];
  const A=e*i-f*h,B=f*g-d*i,C=d*h-e*g,D=c*h-b*i,E=a*i-c*g,F=b*g-a*h,G=b*f-c*e,H=c*d-a*f,I=a*e-b*d;
@@ -58,10 +61,11 @@ export function createMeshRenderer(canvas,{preserve=false}={}){
   rotateY(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[2]=-s;m[8]=s;m[10]=c;current=multiply(current,m);},
   rotateZ(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[1]=s;m[4]=-s;m[5]=c;current=multiply(current,m);},
   mesh(kind,color,emission=0,alpha=1){if(alpha<=.005)return;queue.push({kind,color:rgb(color),emission,alpha:Math.max(0,Math.min(1,alpha)),matrix:new Float32Array(current)});},
-  begin({width=canvas.width,height=canvas.height,background='#d0ded5',camera=[7,7.2,15],target=[0,2,0],span=18}={}){
+  begin({width=canvas.width,height=canvas.height,background='#d0ded5',camera=[0,2.5,18],target=[0,2.5,0],span=18,fov}={}){
    if(disposed)return;current=identity();stack=[];queue=[];eye=camera;fog=rgb(background);const cw=Math.max(1,Math.round(width)),ch=Math.max(1,Math.round(height));if(canvas.width!==cw)canvas.width=cw;if(canvas.height!==ch)canvas.height=ch;
-   gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(...fog,1);gl.depthMask(true);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);viewProjection=multiply(orthographic(span,span*canvas.height/canvas.width),lookAt(camera,target));
+   gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(...fog,1);gl.depthMask(true);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);viewProjection=cameraMatrix({camera,target,span,fov},canvas.width,canvas.height);
   },
+  project(point,width=canvas.width,height=canvas.height){return projectPoint(viewProjection,point,width,height);},
   flush(){
    if(disposed)return;gl.useProgram(program);gl.uniformMatrix4fv(uniform.uVP,false,viewProjection);gl.uniform3fv(uniform.uEye,eye);gl.uniform3fv(uniform.uFog,fog);let bound=null;
    const opaque=queue.filter(q=>q.alpha>=.995),transparent=queue.filter(q=>q.alpha<.995).sort((a,b)=>Math.hypot(...b.matrix.slice(12,15).map((x,i)=>x-eye[i]))-Math.hypot(...a.matrix.slice(12,15).map((x,i)=>x-eye[i])));

@@ -1,10 +1,11 @@
-import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=2.0.0';
-import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,campaignFighterFor,chooseRoute,rivalsFor,stageFor,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=2.0.0';
-import {icon,petArt,weaponArt} from './art.mjs?v=2.0.0';
-import {playCombatMotion,paintArtwork,destroyScene3D,syncScene3D,resumeScene3D} from './battle3d.mjs?v=2.0.0';
-import {readProtectedSave,writeProtectedSave} from './save-store.mjs?v=2.0.0';
-import {handArt} from './fighter-rig.mjs?v=2.0.0';
-import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=2.0.0';
+import {RELIC,hasRelic,relicActive,redeemCdk,relicArt} from './relics.mjs?v=2.0.1';
+import {PETS,SKILLS,TOTAL_STAGES,STAGES_PER_CHAPTER,CHAPTERS,QUESTS,STANCES,WEAPONS,Battle,freshState,normalizeState,syncDay,fighterFor,campaignFighterFor,chooseRoute,rivalsFor,stageFor,settleBattle,train,buyWeapon,toggleWeapon,leadWeapon,toggleSkill,claimQuest,weapon,statsFor} from './engine.mjs?v=2.0.1';
+import {icon,petArt,weaponArt} from './art.mjs?v=2.0.1';
+import {playCombatMotion,paintArtwork,destroyScene3D,syncScene3D,resumeScene3D} from './battle3d.mjs?v=2.0.1';
+import {readProtectedSave,writeProtectedSave} from './save-store.mjs?v=2.0.1';
+import {handArt} from './fighter-rig.mjs?v=2.0.1';
+import {combatSnapshot} from './combat-presentation.mjs?v=2.0.1';
+import {appView,healthBox,combatControls,logView,groundView,pocketsView,tacticsView,heldLabel,motionControl,escapeHTML as e,NAV} from './views.mjs?v=2.0.1';
 const STORE='pet-brawl-jianghu-v1';
 const root=document.querySelector('#app'),modalRoot=document.querySelector('#modal-root'),toastEl=document.querySelector('#toast');
 let loadedSave;try{loadedSave=readProtectedSave(localStorage,STORE);}catch{loadedSave={state:freshState(),blocked:true,recovered:false};}
@@ -73,23 +74,24 @@ function updateCombat(){
 function syncHeld(){
   (ui.display||ui.battle.fighters).forEach((f,i)=>{const held=document.querySelector('#held-'+i),label=document.querySelector('#held-label-'+i);if(held){held.innerHTML=handArt(f.held);held.style.opacity='1';}if(label)label.textContent=heldLabel(f);});
 }
-function appendEvent(v){ui.logs.push({step:v.step,actor:v.actor,burst:['burst','martial','boss-skill','boss-charge'].includes(v.kind)||!!v.weaponEvent,text:eventText(v)});}
+function appendEvent(v){if(!v||ui.logs.some(l=>l.step===v.step))return;ui.logs.push({step:v.step,actor:v.actor,burst:['burst','martial','boss-skill','boss-charge'].includes(v.kind)||!!v.weaponEvent,text:eventText(v)});}
 function playStep(){
   clearTimeout(timer);if(!ui.battle||ui.battle.done||ui.animating||ui.paused||document.visibilityState==='hidden')return;
-  const v=ui.battle.step();if(!v)return;ui.animating=true;appendEvent(v);
+  const v=ui.battle.step();if(!v)return;ui.animating=true;ui.pendingEvent=v;let fraction=0,transferred=false;
+  const commitLog=()=>{if(fraction>=1&&(!v.weaponEvent||transferred))appendEvent(v);};
   const banner=document.querySelector('#event-banner');if(banner){banner.className='event-banner '+(['burst','martial','boss-skill','boss-charge'].includes(v.kind)?'burst':['steal','disarm','pickup'].includes(v.kind)?'tactic-banner':'');banner.textContent=v.kind==='stunned'?v.before[v.actor].name+'：头有点晕……':v.kind==='burn'?'灼烧发作！':v.before[v.actor].name+' · '+v.name;}
   motionCancel=playCombatMotion(v,{speed:state.settings.speed,motion:state.settings.motion,
-    onImpact(fraction){
-      ui.display=v.after.map((f,i)=>({...f,weapons:[...v.before[i].weapons],held:v.before[i].held,heldIndex:v.before[i].heldIndex,heldUses:v.before[i].heldUses,weaponUses:[...v.before[i].weaponUses]}));
-      if(fraction<1)ui.display[v.target].hp=Math.min(ui.display[v.target].maxHp,v.after[v.target].hp+v.damage-Math.ceil(v.damage*fraction));
-      ui.displayGround=v.groundBefore;updateCombat();sound(v.dodged?'miss':v.kind);
+    onImpact(part){
+      fraction=part;ui.display=combatSnapshot(v,fraction,{transferred});
+      ui.displayGround=transferred?v.groundAfter:v.groundBefore;commitLog();updateCombat();sound(v.dodged?'miss':v.kind);
     },
-    onTransfer(){ui.display=v.after;ui.displayGround=v.groundAfter;updateCombat();syncHeld();},
-    onFinish(){motionCancel=null;ui.animating=false;ui.display=v.after;ui.displayGround=v.groundAfter;updateCombat();syncHeld();if(ui.battle.done)finishBattle();else if(!ui.paused&&document.visibilityState!=='hidden')timer=setTimeout(playStep,90/state.settings.speed);}
+    onTransfer(){transferred=true;ui.display=combatSnapshot(v,fraction,{transferred});ui.displayGround=v.groundAfter;commitLog();updateCombat();syncHeld();},
+    onFinish(){appendEvent(v);ui.pendingEvent=null;motionCancel=null;ui.animating=false;ui.display=v.after;ui.displayGround=v.groundAfter;updateCombat();syncHeld();if(ui.battle.done)finishBattle();else if(!ui.paused&&document.visibilityState!=='hidden')timer=setTimeout(playStep,90/state.settings.speed);}
   });
 }
 function skipBattle(){
   if(!active())return;clearTimeout(timer);motionCancel?.();motionCancel=null;ui.animating=false;ui.paused=false;
+  appendEvent(ui.pendingEvent);ui.pendingEvent=null;
   while(!ui.battle.done){const v=ui.battle.step();appendEvent(v);}
   ui.display=ui.battle.snapshot();ui.displayGround=ui.battle.ground;updateCombat();syncHeld();finishBattle();
 }

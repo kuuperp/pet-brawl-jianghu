@@ -386,7 +386,7 @@ export function drawCharacter(r,fighter={},pose={},options={}){
  r.push();r.translate(finite(options.x),finite(options.y),finite(options.z));
  // Ground contact is independent of body rocking and articulation.
  part(r,'disc','#233944',0,.018,0,.66*scale,1,.34*scale,0,0,0,0,.23);
- r.rotateY(faceDir*.28);r.scale(faceDir*scale,scale,scale);
+ r.rotateY(finite(options.yaw));r.scale(faceDir*scale,scale,scale);
  r.translate(0,finite(pose.y)*-.012,0);
  r.rotateZ(-finite(pose.body)*RAD-dead*1.35);
  if(dead)r.translate(-dead*.6,-dead*.58,0);
@@ -500,26 +500,34 @@ function banners(r,p,x=5.7,z=-3.6){
 function platform(r,p,id){
  const wood=['market','river','cliff'].includes(id),round=['bamboo','blossom','garden','marsh','observatory','sky','celestial'].includes(id);
  if(round){
-  rod(r,p.edge,0,-.31,0,6.9,.31,3.55);
-  rod(r,p.floor,0,-.055,0,6.68,.075,3.4);
-  ring(r,p.trim,0,.026,0,6.2,.32,3.02);
-  ring(r,p.trim,0,.034,0,1.18,.35,1.18);
+  rod(r,p.edge,0,-.34,0,6.4,.34,2.65);
+  rod(r,p.floor,0,-.045,0,6.3,.065,2.55);
+  ring(r,p.trim,0,.026,0,5.9,.25,2.3);
+  ring(r,p.trim,0,.034,0,.95,.24,.75);
  }else{
-  box(r,p.edge,0,-.29,0,6.8,.29,3.4);
-  box(r,p.floor,0,-.035,0,6.65,.065,3.25);
-  for(const side of [-1,1])box(r,p.trim,0,.035,side*3.12,6.55,.026,.035);
-  for(const side of [-1,1])box(r,p.trim,side*6.53,.035,0,.035,.026,3.1);
+  box(r,p.edge,0,-.34,0,6.4,.34,2.6);
+  box(r,p.floor,0,-.045,0,6.3,.065,2.5);
+  for(const side of [-1,1])box(r,p.trim,0,.035,side*2.4,6.18,.026,.035);
+  for(const side of [-1,1])box(r,p.trim,side*6.18,.035,0,.035,.026,2.4);
  }
  if(wood){
-  for(let i=0;i<12;i++)box(r,i%2?'#987a5b':'#a78b6b',(i-5.5)*1.03,.039,0,.49,.009,2.85);
+  for(let i=0;i<12;i++)box(r,i%2?'#987a5b':'#a78b6b',(i-5.5)*1.03,.039,0,.49,.009,2.33);
  }else{
   for(let iz=-1;iz<=1;iz++)for(let ix=-4;ix<=4;ix++){
    if(round&&Math.abs(ix)===4&&Math.abs(iz)===1)continue;
-   box(r,(ix+iz)%3===0?p.stone:p.floor,ix*1.32,.029,iz*1.35,.63,.012,.62);
+   box(r,(ix+iz)%3===0?p.stone:p.floor,ix*1.32,.029,iz*1.02,.63,.012,.46);
   }
  }
- // Four carved fittings make the ring read as a built object from any camera angle.
- for(const x of [-5.8,5.8])for(const z of [-2.65,2.65])rod(r,p.trim,x,.04,z,.12,.08,.12);
+ // A shallow deck, carved front fascia and centered steps read clearly at eye level.
+ for(const x of [-5.65,5.65])for(const z of [-1.7,1.7])rod(r,p.trim,x,.04,z,.1,.06,.1);
+ if(!round){
+  box(r,p.trim,0,-.15,2.625,6.22,.024,.025);
+  for(let i=-4;i<=4;i++)box(r,p.stone,i*1.22,-.4,2.625,.4,.12,.024);
+ }
+ box(r,p.edge,0,-.7,2.85,1.5,.12,.42);
+ box(r,p.floor,0,-.57,2.85,1.46,.025,.39);
+ box(r,p.edge,0,-.9,3.22,1.72,.1,.38);
+ box(r,p.stone,0,-.79,3.22,1.68,.025,.35);
 }
 function ambientBase(r,p){
  rod(r,p.sky,0,-1.12,-1,11,.3,8);
