@@ -1,4 +1,4 @@
-import {HERO_RIG,heroRoot} from './hero-rig.mjs?v=2.3.0';
+import {HERO_RIG,heroRoot} from './hero-rig.mjs?v=2.4.0';
 const PI=Math.PI,RAD=PI/180,finite=(x,f=0)=>Number.isFinite(x)?x:f;
 const GOLD='#d9b66c',INK='#22333b',FUR={roughness:.91},CLOTH={roughness:.83},LEATHER={roughness:.53},METAL={roughness:.27,metalness:.72};
 export const HERO_PALETTES={

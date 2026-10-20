@@ -1,5 +1,5 @@
 // A level, centered camera: perspective supplies depth without rotating the arena.
-import {martialDetails} from './martial-motion.mjs?v=2.3.0';
+import {martialDetails} from './martial-motion.mjs?v=2.4.0';
 export const ARENA_LENGTH_SCALE=1.7,ARENA_HALF_WIDTH=6.4*ARENA_LENGTH_SCALE,FIGHTER_START_X=5.8;
 const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 export function battleViewport(width,height){const top=width<600?100:88,bottom=34;return{x:0,y:top,width,height:Math.max(160,height-top-bottom)};}

@@ -1,11 +1,13 @@
-import {RELIC,relicActive} from './relics.mjs?v=2.3.0';
-import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=2.3.0';
-import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=2.3.0';
-import {NEW_WEAPONS,NEW_SKILLS,NEW_ARTS,balanceWeapon} from './armory.mjs?v=2.3.0';
-import {ROUTES} from './chronicles.mjs?v=2.3.0';
-import {bossProfile,resolveBossTurn,phaseBoss,interruptBoss} from './bosses.mjs?v=2.3.0';
-import {extraDamageMultiplier,healingMultiplier,shieldMultiplier,weaponProc} from './combat-rules.mjs?v=2.3.0';
-import {MIN_WEAPON_USES,MAX_WEAPON_USES,randomWeaponLimit,weaponUseLimit,weaponExhausted} from './weapon-cycle.mjs?v=2.3.0';
+import {RELIC,relicActive} from './relics.mjs?v=2.4.0';
+import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=2.4.0';
+import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=2.4.0';
+import {NEW_WEAPONS,NEW_SKILLS,NEW_ARTS,balanceWeapon} from './armory.mjs?v=2.4.0';
+import {ROUTES} from './chronicles.mjs?v=2.4.0';
+import {bossProfile,resolveBossTurn,phaseBoss,interruptBoss} from './bosses.mjs?v=2.4.0';
+import {extraDamageMultiplier,healingMultiplier,shieldMultiplier,weaponProc} from './combat-rules.mjs?v=2.4.0';
+import {MIN_WEAPON_USES,MAX_WEAPON_USES,randomWeaponLimit,weaponUseLimit,weaponExhausted} from './weapon-cycle.mjs?v=2.4.0';
+import {BALANCE_VERSION,levelGrowth,trainingBonus,experienceRate,baseExperienceFraction} from './progression.mjs?v=2.4.0';
+export {experienceRate,XP_RULES} from './progression.mjs?v=2.4.0';
 export {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,ROUTES};
 export const VERSION=1;
 export const HEALTH_SCALE=3.2;
@@ -64,7 +66,7 @@ export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function seeded(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 export function today(){const d=new Date();return`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
 export function xpNeeded(level){return 65+level*30;}
-export function freshState(){return{version:VERSION,contentVersion:3,chapterChoices:{},cdkClaims:[],relicEquipped:false,name:'豆豆',pet:'penguin',level:1,xp:0,gold:220,rating:0,wins:0,losses:0,battles:0,streak:0,bestStreak:0,stage:1,owned:['bamboo','brick'],equipped:['bamboo','brick'],skills:['wind'],training:{hp:0,atk:0,def:0,agi:0},stance:'balanced',daily:{date:today(),battles:0,wins:0,trains:0,claimed:[]},settings:{sound:false,speed:1.5,autoBurst:true,motion:'full'},history:[],rewarded:[],createdAt:Date.now()};}
+export function freshState(){return{version:VERSION,contentVersion:BALANCE_VERSION,chapterChoices:{},cdkClaims:[],relicEquipped:false,name:'豆豆',pet:'penguin',level:1,xp:0,gold:220,rating:0,wins:0,losses:0,battles:0,streak:0,bestStreak:0,stage:1,owned:['bamboo','brick'],equipped:['bamboo','brick'],skills:['wind'],training:{hp:0,atk:0,def:0,agi:0},stance:'balanced',daily:{date:today(),battles:0,wins:0,trains:0,claimed:[]},settings:{sound:false,speed:1.5,autoBurst:true,motion:'full'},history:[],rewarded:[],createdAt:Date.now()};}
 export function normalizeState(raw){
   if(!raw||typeof raw!=='object'||raw.version!==VERSION)throw new Error('这不是有效的江湖存档。');
   const s=freshState();
@@ -85,12 +87,13 @@ export function normalizeState(raw){
   s.stance=STANCES[raw.stance]?raw.stance:s.stance;
   if(raw.daily?.date===today()){for(const key of ['battles','wins','trains'])s.daily[key]=number(raw.daily[key],0,100000,0);s.daily.claimed=Array.isArray(raw.daily.claimed)?raw.daily.claimed.filter(id=>QUESTS.some(q=>q.id===id)):[];}
   if(raw.settings){s.settings.motion=raw.settings.motion==='reduced'?'reduced':'full';s.settings.sound=raw.settings.sound===true;s.settings.autoBurst=raw.settings.autoBurst!==false;s.settings.speed=[1,1.5,2,3].includes(raw.settings.speed)?raw.settings.speed:1.5;}
-  s.history=Array.isArray(raw.history)?raw.history.slice(0,20).filter(h=>h&&typeof h.opponent==='string'&&typeof h.won==='boolean').map(h=>({opponent:h.opponent.slice(0,20),won:h.won,mode:h.mode==='tower'?'tower':'arena',gold:number(h.gold,0,100000,0),xp:number(h.xp,0,100000,0),time:number(h.time,0,9999999999999,0),rounds:number(h.rounds,0,80,0),disarms:number(h.disarms,0,160,0),steals:number(h.steals,0,160,0),pickups:number(h.pickups,0,160,0)})):[];
+  s.history=Array.isArray(raw.history)?raw.history.slice(0,20).filter(h=>h&&typeof h.opponent==='string'&&typeof h.won==='boolean').map(h=>({opponent:h.opponent.slice(0,20),won:h.won,mode:h.mode==='tower'?'tower':'arena',practice:h.practice===true,gold:number(h.gold,0,100000,0),xp:number(h.xp,0,100000,0),time:number(h.time,0,9999999999999,0),rounds:number(h.rounds,0,80,0),disarms:number(h.disarms,0,160,0),steals:number(h.steals,0,160,0),pickups:number(h.pickups,0,160,0)})):[];
   s.rewarded=Array.isArray(raw.rewarded)?raw.rewarded.filter(id=>typeof id==='string').slice(-30):[];s.createdAt=number(raw.createdAt,0,9999999999999,Date.now());
   return s;
 }
 export function syncDay(s){if(s.daily.date!==today())s.daily={date:today(),battles:0,wins:0,trains:0,claimed:[]};}
-export function statsFor(s){const p=PETS[s.pet],l=s.level-1,t=s.training;let out={hp:Math.round((p.hp+l*12+t.hp*7)*HEALTH_SCALE),atk:Math.round(p.atk+l*2.4+t.atk*1.4),def:Math.round(p.def+l*1.15+t.def*1.1),agi:Math.round(p.agi+l*1.2+t.agi*1.3)};if(s.stance==='fierce'){out.atk=Math.round(out.atk*1.18);out.def=Math.round(out.def*.8);}if(s.stance==='nimble')out.atk=Math.round(out.atk*.9);out.evasion=0;if(relicActive(s)){out.atk+=RELIC.atk;out.def+=RELIC.def;out.evasion=RELIC.evasion;}return out;}
+export function statsFor(s){const p=PETS[s.pet],l=levelGrowth(s.level),t=s.training;let out={hp:Math.round((p.hp+l*12+trainingBonus('hp',t.hp))*HEALTH_SCALE),atk:Math.round(p.atk+l*2.2+trainingBonus('atk',t.atk)),def:Math.round(p.def+l*.85+trainingBonus('def',t.def)),agi:Math.round(p.agi+l*.75+trainingBonus('agi',t.agi))};if(s.stance==='fierce'){out.atk=Math.round(out.atk*1.18);out.def=Math.round(out.def*.8);}if(s.stance==='nimble')out.atk=Math.round(out.atk*.9);out.evasion=0;if(relicActive(s)){out.atk+=RELIC.atk;out.def+=RELIC.def;out.evasion=RELIC.evasion;}return out;}
+export function trainingGain(s,key){if(!Object.hasOwn(s.training,key)||s.training[key]>=trainingLimit(s))return 0;const base={...s,stance:'balanced'},next={...base,training:{...s.training,[key]:s.training[key]+1}};return statsFor(next)[key]-statsFor(base)[key];}
 export function power(f){return Math.round(f.hp*.11+f.atk*3.5+f.def*2.8+f.agi*1.8+f.weapons.map(id=>(weapon(id).min+weapon(id).max)*1.2).sort((a,b)=>b-a).slice(0,3).reduce((sum,n)=>sum+n,0)/Math.max(1,Math.min(3,f.weapons.length))+Math.min(10,f.weapons.length)*2+f.skills.length*12+(f.evasion||0)*1.8);}
 export function fighterFor(s){const f={name:s.name,pet:s.pet,level:s.level,...statsFor(s),weapons:[...s.equipped],skills:[...s.skills],stance:s.stance,relic:relicActive(s)?RELIC.id:null};return{...f,power:power(f)};}
 export function campaignFighterFor(s,opponent){
@@ -101,8 +104,8 @@ export function campaignFighterFor(s,opponent){
 }
 export function chooseRoute(s,chapter,route){if(!Number.isInteger(chapter)||chapter<0||chapter>=CHAPTERS.length||chapter*40+1>s.stage||!Object.hasOwn(ROUTES,route))return{ok:false,message:'先抵达这一章，再决定行动方针'};s.chapterChoices[chapter]=route;return{ok:true};}
 export function trainingLimit(s){return Math.min(240,60+Math.floor((Math.max(1,s.stage)-1)/40)*10);}
-function enemyFor(name,pet,level,factor=1,boss=false,seed=1){const rng=seeded(seed),p=PETS[pet],l=level-1;const available=WEAPONS.filter(w=>w.level<=level+1);const weapons=[...available].sort(()=>rng()-.5).slice(0,Math.min(available.length,2+Math.floor(level/3)+(boss?2:0))).map(w=>w.id);const skills=SKILLS.filter(k=>k.level<=level).slice(-2).map(k=>k.id);const f={name,pet,level,hp:Math.round((p.hp+l*15)*HEALTH_SCALE*factor*(boss?1.20:1)),atk:Math.round((p.atk+l*2.7)*factor),def:Math.round((p.def+l*1.3)*factor),agi:Math.round((p.agi+l*1.1)*factor),weapons,skills,stance:'balanced',boss};return{...f,power:power(f)};}
-export function rivalsFor(s,seed){return [.80,.98,1.15].map((factor,i)=>{const rng=seeded(seed+i*371);const index=Math.floor(rng()*RIVAL_NAMES.length),pet=Object.keys(PETS)[Math.floor(rng()*4)],level=Math.max(1,s.level+(i===2?1:0));return{...enemyFor(RIVAL_NAMES[index],pet,level,factor,false,seed+i*11),key:`rival-${seed}-${i}`,mode:'arena',gold:48+i*18+s.level*5,xp:34+i*10+s.level*3,difficulty:i};});}
+function enemyFor(name,pet,level,factor=1,boss=false,seed=1){const rng=seeded(seed),p=PETS[pet],l=levelGrowth(level);const available=WEAPONS.filter(w=>w.level<=level+1);const weapons=[...available].sort(()=>rng()-.5).slice(0,Math.min(available.length,2+Math.floor(level/3)+(boss?2:0))).map(w=>w.id);const skills=SKILLS.filter(k=>k.level<=level).slice(-2).map(k=>k.id);const f={name,pet,level,hp:Math.round((p.hp+l*13)*HEALTH_SCALE*factor*(boss?1.20:1)),atk:Math.round((p.atk+l*2.3)*factor),def:Math.round((p.def+l*.90)*factor),agi:Math.round((p.agi+l*.75)*factor),weapons,skills,stance:'balanced',boss};return{...f,power:power(f)};}
+export function rivalsFor(s,seed){return [.80,.98,1.15].map((factor,i)=>{const rng=seeded(seed+i*371);const index=Math.floor(rng()*RIVAL_NAMES.length),pet=Object.keys(PETS)[Math.floor(rng()*4)],level=Math.min(MAX_LEVEL,Math.max(1,s.level+(i===2?1:0))),reward={mode:'arena',difficulty:i};return{...enemyFor(RIVAL_NAMES[index],pet,level,factor,false,seed+i*11),key:`rival-${seed}-${i}`,...reward,gold:48+i*18+s.level*5,xp:Math.round(xpNeeded(level)*baseExperienceFraction(reward))};});}
 export function stageFor(n){
  const story=campaignStage(n),{stage,chapter,boss,chapterBoss}=story,level=Math.max(1,Math.ceil(stage/3));
  const factor=.88+chapter*.012+(boss?(chapterBoss?.34+chapter*.012:.20+chapter*.009):0);
@@ -115,10 +118,20 @@ export function stageFor(n){
  if(boss){enemy.bossProfile=bossProfile(chapter,story.segment,story);enemy.modelScale=enemy.bossProfile.scale;enemy.bossStyle=enemy.bossProfile.style;enemy.armor=enemy.bossProfile.armor;enemy.accessory=enemy.bossProfile.accessory;enemy.hp=Math.round(enemy.hp*(chapterBoss?1.12:1.06));enemy.def=Math.round(enemy.def*(chapterBoss?1.12:1.06));}
  if(story.encounter==='elite'){enemy.hp=Math.round(enemy.hp*1.18);enemy.def=Math.round(enemy.def*1.08);enemy.startShield=Math.round(enemy.hp*.12);}
  const rewardScale=story.encounter==='elite'?1.2:story.encounter==='trial'?1.12:1;
- return{...enemy,...story,power:power(enemy),key:`stage-${stage}`,mode:'tower',gold:Math.round((80+stage*11+(chapterBoss?400:boss?160:0))*rewardScale),xp:Math.round((55+stage*3+(chapterBoss?180:boss?75:0))*rewardScale)};
+ return{...enemy,...story,power:power(enemy),key:`stage-${stage}`,mode:'tower',gold:Math.round((80+stage*11+(chapterBoss?400:boss?160:0))*rewardScale),xp:Math.round(xpNeeded(level)*baseExperienceFraction(story))};
+}
+export function stageChallenge(s,n){const valid=Number.isInteger(n)&&n>=1&&n<=TOTAL_STAGES,early=valid&&n>s.stage&&n%10===0;return{allowed:valid&&(n<=s.stage||early),early};}
+export function battleRewards(s,opponent,won=true){
+ const tower=opponent.mode==='tower',access=tower?stageChallenge(s,opponent.stage):{allowed:true,early:false},practice=access.early,locked=!access.allowed;
+ const firstClear=!!(won&&tower&&opponent.stage===s.stage),replay=tower&&opponent.stage<s.stage,gap=Math.abs(s.level-opponent.level),xpRate=experienceRate(s.level,opponent.level);
+ if(practice||locked)return{gold:0,xp:0,xpRate:0,gap,practice,locked,firstClear:false,replay:false};
+ const gold=Math.round(opponent.gold*(won?(replay?.45:1):.28)*(firstClear?(ROUTES[s.chapterChoices?.[opponent.chapter]]?.gold||1):1));
+ const multiplier=won?(replay?.65:1):.20,cap=xpNeeded(s.level)*(won?(firstClear?.85:.30):.08);
+ const xp=s.level>=MAX_LEVEL?0:Math.floor(Math.min(cap,Math.round(opponent.xp*multiplier))*xpRate);
+ return{gold,xp,xpRate,gap,practice:false,locked:false,firstClear,replay};
 }
 export function rankFor(s){const ranks=[{min:0,name:'初出茅庐',symbol:'芽'},{min:100,name:'青铜小侠',symbol:'铜'},{min:260,name:'白银少侠',symbol:'银'},{min:520,name:'黄金高手',symbol:'金'},{min:900,name:'名动江湖',symbol:'侠'},{min:1500,name:'乐斗宗师',symbol:'宗'}];const i=ranks.findLastIndex(r=>s.rating>=r.min);return{...ranks[i],next:ranks[i+1]||null};}
-export function trainingCost(s,key){return 45+s.training[key]*13+Math.floor(Object.values(s.training).reduce((a,b)=>a+b,0)*2);}
+export function trainingCost(s,key){const n=s.training[key];return 45+n*16+Math.floor(Object.values(s.training).reduce((a,b)=>a+b,0)*3+Math.max(0,n-40)**2*.10);}
 export function train(s,key){if(!Object.hasOwn(s.training,key))return{ok:false,message:'未知修炼项目'};if(s.training[key]>=trainingLimit(s))return{ok:false,message:'这项属性已经修炼圆满'};const cost=trainingCost(s,key);if(s.gold<cost)return{ok:false,message:'铜钱不够啦，打一场乐斗再来吧'};s.gold-=cost;s.training[key]++;syncDay(s);s.daily.trains++;return{ok:true,cost};}
 export function buyWeapon(s,id){const w=WEAPONS.find(w=>w.id===id);if(!w)return{ok:false,message:'没有这件兵器'};if(s.owned.includes(id))return{ok:false,message:'这件兵器已经在背包里啦'};if(s.level<w.level)return{ok:false,message:`达到 Lv.${w.level} 后解锁`};if(s.gold<w.cost)return{ok:false,message:'铜钱不够啦，乐斗就能赚铜钱'};s.gold-=w.cost;s.owned.push(id);return{ok:true};}
 export function toggleWeapon(s,id){if(!s.owned.includes(id))return{ok:false,message:'先收集这件兵器吧'};if(s.equipped.includes(id)){if(s.equipped.length===1)return{ok:false,message:'至少带一件兵器上场哦'};s.equipped=s.equipped.filter(x=>x!==id);}else{s.equipped.unshift(id);}return{ok:true};}
@@ -258,16 +271,17 @@ export class Battle{
 }
 export function settleBattle(s,opponent,won,id,combat={}){
   if(s.rewarded.includes(id))return null;
+  const reward=battleRewards(s,opponent,won);if(reward.locked)return null;
+  const {gold,xp,firstClear,practice}=reward,levels=[],unlocks=[];
   s.rewarded.push(id);s.rewarded=s.rewarded.slice(-30);syncDay(s);
-  s.battles++;s.daily.battles++;if(won){s.wins++;s.daily.wins++;s.streak++;s.bestStreak=Math.max(s.streak,s.bestStreak);}else{s.losses++;s.streak=0;}
-  const firstClear=won&&opponent.mode==='tower'&&s.stage===opponent.stage;
-  const replay=opponent.mode==='tower'&&!firstClear;
-  const gold=Math.round(opponent.gold*(won?(replay?.45:1):.28)*(firstClear?(ROUTES[s.chapterChoices?.[opponent.chapter]]?.gold||1):1)),xp=Math.round(opponent.xp*(won?(replay?.65:1):.45));
-  s.gold+=gold;s.xp+=xp;if(opponent.mode==='arena')s.rating=Math.max(0,s.rating+(won?18+opponent.difficulty*4:-6));
-  const levels=[],unlocks=[];
-  while(s.level<MAX_LEVEL&&s.xp>=xpNeeded(s.level)){s.xp-=xpNeeded(s.level);s.level++;levels.push(s.level);s.gold+=40;for(const skill of SKILLS.filter(k=>k.level===s.level)){unlocks.push(`领悟「${skill.name}」`);if(!s.skills.includes(skill.id))s.skills.push(skill.id);}if([2,5,8].includes(s.level)){const w=WEAPONS.find(w=>w.level<=s.level&&!s.owned.includes(w.id));if(w){s.owned.push(w.id);unlocks.push(`得到「${w.name}」`);s.equipped.push(w.id);}}}
-  if(s.level===MAX_LEVEL)s.xp=Math.min(s.xp,xpNeeded(MAX_LEVEL)-1);
-  if(firstClear){s.stage=Math.min(TOTAL_STAGES+1,s.stage+1);if(opponent.reward&&!s.owned.includes(opponent.reward)){s.owned.push(opponent.reward);unlocks.push(`首通获得「${weapon(opponent.reward).name}」`);s.equipped.unshift(opponent.reward);}}
-  const history={opponent:opponent.name,won,mode:opponent.mode,gold:gold+levels.length*40,xp,time:Date.now(),rounds:combat.rounds||0,disarms:combat.disarms||0,steals:combat.steals||0,pickups:combat.pickups||0};s.history.unshift(history);s.history=s.history.slice(0,20);
-  return{won,gold:history.gold,xp,levels,unlocks,firstClear,combat,chapterClear:firstClear&&opponent.stage%STAGES_PER_CHAPTER===0};
+  // Early boss fights record the bout without touching progression or quest counters.
+  if(!practice){
+    s.battles++;s.daily.battles++;if(won){s.wins++;s.daily.wins++;s.streak++;s.bestStreak=Math.max(s.streak,s.bestStreak);}else{s.losses++;s.streak=0;}
+    s.gold+=gold;s.xp+=xp;if(opponent.mode==='arena')s.rating=Math.max(0,s.rating+(won?18+opponent.difficulty*4:-6));
+    while(s.level<MAX_LEVEL&&s.xp>=xpNeeded(s.level)){s.xp-=xpNeeded(s.level);s.level++;levels.push(s.level);s.gold+=40;for(const skill of SKILLS.filter(k=>k.level===s.level)){unlocks.push(`领悟「${skill.name}」`);if(!s.skills.includes(skill.id))s.skills.push(skill.id);}if([2,5,8].includes(s.level)){const w=WEAPONS.find(w=>w.level<=s.level&&!s.owned.includes(w.id));if(w){s.owned.push(w.id);unlocks.push(`得到「${w.name}」`);s.equipped.push(w.id);}}}
+    if(s.level===MAX_LEVEL)s.xp=Math.min(s.xp,xpNeeded(MAX_LEVEL)-1);
+    if(firstClear){s.stage=Math.min(TOTAL_STAGES+1,s.stage+1);if(opponent.reward&&!s.owned.includes(opponent.reward)){s.owned.push(opponent.reward);unlocks.push(`首通获得「${weapon(opponent.reward).name}」`);s.equipped.unshift(opponent.reward);}}
+  }
+  const history={opponent:opponent.name,won,mode:opponent.mode,practice,gold:gold+levels.length*40,xp,time:Date.now(),rounds:combat.rounds||0,disarms:combat.disarms||0,steals:combat.steals||0,pickups:combat.pickups||0};s.history.unshift(history);s.history=s.history.slice(0,20);
+  return{...reward,won,gold:history.gold,levels,unlocks,combat,chapterClear:firstClear&&opponent.stage%STAGES_PER_CHAPTER===0};
 }

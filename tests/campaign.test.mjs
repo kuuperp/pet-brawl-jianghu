@@ -35,12 +35,12 @@ test('Expanded equipment has distinct art, can lead the loadout and enters battl
  for(const w of WEAPONS){const s=freshState();s.owned.push(w.id);s.owned=[...new Set(s.owned)];s.equipped=[...s.owned];const owned=JSON.stringify(s.owned);assert.equal(leadWeapon(s,w.id).ok,true);assert.equal(s.equipped[0],w.id);assert.equal(JSON.stringify(s.owned),owned);const b=new Battle(fighterFor(s),rivalsFor(s,3)[0],()=>.5);b.actor=0;const e=b.step();assert.equal(e.weapon,w.id);assert.ok(e.damage>=0);assert.ok(weaponArt(w.id).includes('<svg'));}
  assert.equal(leadWeapon(freshState(),'orb').ok,false);
 });
-test('The chapter UI exposes exactly forty inspectable stages and never unlocks a future challenge',()=>{
+test('The chapter UI exposes forty inspectable stages and allows only future bosses as practice',()=>{
  const s=freshState(),r=rivalsFor(s,1);
  for(const n of [1,40,41,80,81,120,121,160,161,200]){
   const html=appView(s,{nav:'tower',towerStage:n,rivals:r,selected:r[0],logs:[],battle:null});
   assert.equal((html.match(/data-action="select-stage"/g)||[]).length,40);assert.equal((html.match(/data-action="select-chapter"/g)||[]).length,20);
-  const button=html.match(/<button[^>]+data-action="challenge-stage"[^>]*>/)[0];assert.equal(button.includes('disabled'),n>1);assert.ok(!html.includes('undefined'));assert.ok(!html.includes('NaN'));
+  const button=html.match(/<button[^>]+data-action="challenge-stage"[^>]*>/)[0];assert.equal(button.includes('disabled'),n>1&&n%10!==0);assert.ok(!html.includes('undefined'));assert.ok(!html.includes('NaN'));
  }
  s.stage=801;const html=appView(s,{nav:'tower',towerStage:200,rivals:r,selected:r[0],logs:[],battle:null});assert.ok(html.includes('二十章通关'));
 });

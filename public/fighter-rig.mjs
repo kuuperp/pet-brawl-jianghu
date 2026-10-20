@@ -1,4 +1,4 @@
-import {weaponArt} from './art.mjs?v=2.3.0';
+import {weaponArt} from './art.mjs?v=2.4.0';
 // The battle rig is separate from portrait art. Nested elbow/knee joints move the actual limbs.
 export const GUARD={body:0,y:0,head:0,af:-28,ef:-72,ab:22,eb:-75,lf:-15,kf:15,lb:22,kb:-18};
 export const POSES={

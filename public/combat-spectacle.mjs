@@ -1,5 +1,5 @@
-import {profileFor} from './combat-vfx.mjs?v=2.3.0';
-import {duelAnchor} from './duel-rig.mjs?v=2.3.0';
+import {profileFor} from './combat-vfx.mjs?v=2.4.0';
+import {duelAnchor} from './duel-rig.mjs?v=2.4.0';
 const PI=Math.PI,TAU=PI*2,cap=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t;
 const hash=s=>Array.from(String(s)).reduce((h,c)=>(Math.imul(h,31)+c.charCodeAt(0))>>>0,17);
 const smooth=t=>{t=cap(t);return t*t*(3-2*t);};

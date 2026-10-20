@@ -1,6 +1,6 @@
 // Sculpted game assets. Every visible part is a lit 3D mesh; no billboard characters.
-import {drawHero,HERO_PALETTES} from './hero-models.mjs?v=2.3.0';
-import {ARENA_LENGTH_SCALE} from './battle-layout.mjs?v=2.3.0';
+import {drawHero,HERO_PALETTES} from './hero-models.mjs?v=2.4.0';
+import {ARENA_LENGTH_SCALE} from './battle-layout.mjs?v=2.4.0';
 const PI=Math.PI, TAU=PI*2, RAD=PI/180;
 const finite=(x,f=0)=>Number.isFinite(x)?x:f;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
