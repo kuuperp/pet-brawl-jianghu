@@ -1,4 +1,4 @@
-import {NEW_ARTS,NEW_SKILLS} from './armory.mjs?v=2.0.1';
+import {NEW_ARTS,NEW_SKILLS} from './armory.mjs?v=2.1.0';
 // All effects are deterministic samples of the existing combat clock; no independent timers.
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -50,7 +50,7 @@ export function passiveCues(e){
  return list;
 }
 export function vfxFrame(s,v,time){
- const p=clamp(time/s.t.duration),e=s.event,attack=!['pickup','discard','stunned','burn','steal'].includes(e.kind),art=['martial','burst'].includes(e.kind);
+ const p=clamp(time/s.t.duration),e=s.event,attack=!['pickup','discard','stunned','burn','steal','boss-charge'].includes(e.kind),art=['martial','burst','boss-skill'].includes(e.kind);
  const charge=attack&&art?Math.sin(clamp((p-.08)/.32)*Math.PI):0;
  const strike=attack?Math.sin(clamp((p-.28)/.36)*Math.PI):0;
  const impacts=(e.hits>1&&!e.dodged?[.4,.53]:[.4]).map(at=>({age:(p-at)*s.t.duration,at})).filter(x=>attack&&!e.dodged&&x.age>=0&&x.age<600);
@@ -143,6 +143,11 @@ export function createBattleVfx(layer){
  layer.append(canvas);let w=0,h=0,dpr=0;
  return{render(s,v,time,reduced){const ratio=Math.min(2,globalThis.devicePixelRatio||1),width=s.layout.width,height=s.layout.height;
   if(width!==w||height!==h||ratio!==dpr){w=width;h=height;dpr=ratio;canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);}
-  if(reduced){ctx.clearRect(0,0,w,h);return;}drawBattleEffects(ctx,s,v,time);
+  if(reduced){
+   ctx.clearRect(0,0,w,h);const f=vfxFrame(s,v,time),color=f.profile.color,unit=Math.max(24,Math.min(50,s.A.width*.4));
+   if(f.strike>.001){const q=clamp((f.p-.29)/.11),x=mix(v.actorHand.x,v.hitPoint.x,q),y=mix(v.actorHand.y,v.hitPoint.y,q);path(ctx,[[v.actorHand.x-f.dir*unit*.4,v.actorHand.y+unit*.25],[x-f.dir*unit*.2,y-unit*.4],[x,y]],color,4,f.strike*.8);}
+   for(const impact of f.impacts){const q=impact.age/600;circle(ctx,v.hitPoint.x,v.hitPoint.y,unit*(.25+q*1.5),color,3,1-q);}
+   ctx.globalAlpha=1;return;
+  }drawBattleEffects(ctx,s,v,time);
  },destroy(){canvas.remove();}};
 }

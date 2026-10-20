@@ -71,7 +71,7 @@ test('Production effects canvas shares pause/resume/rate, reduced mode and cance
   f.driver.advance(720);const calls=f.canvasCalls.length;assert.ok(calls>100);
   motion.pause();const frozen=f.canvasCalls.length;f.driver.advance(3000);assert.equal(f.canvasCalls.length,frozen);
   motion.setRate(3);motion.resume();f.driver.advance(50);assert.equal(motion.elapsed,870);assert.ok(f.canvasCalls.length>calls);
-  motion.setMotion('reduced');assert.equal(f.canvasCalls.at(-1)[0],'clearRect');
+  const reducedStart=f.canvasCalls.length;motion.setMotion('reduced');assert.equal(f.canvasCalls.at(-1)[0],'clearRect');assert.ok(f.canvasCalls.slice(reducedStart).some(call=>call[0]==='stroke'),'Simplified mode retains the key weapon trail');
   const at=motion.elapsed;motion.setMotion('full');assert.equal(motion.elapsed,at);assert.notEqual(f.canvasCalls.at(-1)[0],'clearRect');
   motion();const canceled=f.canvasCalls.length;f.driver.advance(8000);assert.equal(f.canvasCalls.length,canceled);assert.equal(f.layer.children.length,0);
  }finally{motion?.();f.restore();}

@@ -17,7 +17,21 @@ function normals(m){
 const colors=new Map();
 export function rgb(c){if(Array.isArray(c))return c;const key=c||'#ffffff';if(colors.has(key))return colors.get(key);const h=key.replace('#',''),n=parseInt(h.length===3?h.split('').map(x=>x+x).join(''):h,16);const v=[((n>>16)&255)/255,((n>>8)&255)/255,(n&255)/255];colors.set(key,v);return v;}
 const VERTEX=`attribute vec3 aPosition;attribute vec3 aNormal;uniform mat4 uModel;uniform mat4 uVP;uniform mat3 uNormal;varying mediump vec3 vPosition;varying mediump vec3 vNormal;void main(){vec4 p=uModel*vec4(aPosition,1.0);vPosition=p.xyz;vNormal=normalize(uNormal*aNormal);gl_Position=uVP*p;}`;
-const FRAGMENT=`precision mediump float;uniform vec4 uColor;uniform vec3 uEye;uniform vec3 uFog;uniform float uEmission;varying mediump vec3 vPosition;varying mediump vec3 vNormal;void main(){vec3 n=normalize(vNormal);vec3 light=normalize(vec3(-0.6,1.0,0.8));float diffuse=max(0.0,dot(n,light));float hemi=0.5+0.5*n.y;float rim=pow(1.0-max(dot(normalize(uEye-vPosition),n),0.0),3.0);vec3 halfVector=normalize(light+normalize(uEye-vPosition));float spec=pow(max(dot(n,halfVector),0.0),36.0);vec3 lit=uColor.rgb*(0.40+0.21*hemi+0.48*diffuse)+vec3(1.0,0.94,0.8)*spec*0.16+uColor.rgb*rim*0.10+uColor.rgb*uEmission;float fog=smoothstep(26.0,65.0,length(uEye-vPosition));gl_FragColor=vec4(mix(lit,uFog,fog),uColor.a);}`;
+const FRAGMENT=`precision mediump float;
+uniform vec4 uColor;uniform vec3 uEye;uniform vec3 uFog;uniform float uEmission;
+uniform float uExposure;uniform vec3 uPointPosition;uniform vec3 uPointColor;uniform float uPointPower;
+varying mediump vec3 vPosition;varying mediump vec3 vNormal;
+void main(){
+ vec3 n=normalize(vNormal),light=normalize(vec3(-0.6,1.0,0.8));
+ float diffuse=max(0.0,dot(n,light)),hemi=0.5+0.5*n.y;
+ vec3 view=normalize(uEye-vPosition),halfVector=normalize(light+view);
+ float rim=pow(1.0-max(dot(view,n),0.0),3.0),spec=pow(max(dot(n,halfVector),0.0),36.0);
+ vec3 ray=uPointPosition-vPosition;float distance2=dot(ray,ray);
+ float point=max(dot(n,normalize(ray+vec3(0.0001))),0.0)*uPointPower/(1.0+distance2*0.28);
+ vec3 lit=(uColor.rgb*(0.40+0.21*hemi+0.48*diffuse)+vec3(1.0,0.94,0.8)*spec*0.16+uColor.rgb*rim*0.10)*uExposure;
+ lit+=uColor.rgb*uEmission+uPointColor*(uColor.rgb*0.65+0.2)*point;
+ float fog=smoothstep(26.0,65.0,length(uEye-vPosition));gl_FragColor=vec4(mix(lit,uFog,fog),uColor.a);
+}`;
 export function geometry(kind){
  const pos=[],norm=[];
  const tri=(a,b,c,na,nb=na,nc=na)=>{pos.push(...a,...b,...c);norm.push(...na,...nb,...nc);};
@@ -30,8 +44,17 @@ export function geometry(kind){
   for(let k=0;k<16;k++){const u=k*Math.PI/8,v=(k+1)*Math.PI/8,c=Math.cos(u),s=Math.sin(u),C=Math.cos(v),S=Math.sin(v),a=[c,-1,s],b=[C,-1,S],d=[c*top,1,s*top],e=[C*top,1,S*top],n=unit([c,kind==='cone'?.5:0,s]),N=unit([C,kind==='cone'?.5:0,S]);tri(a,b,e,n,N,N);tri(a,e,d,n,N,n);tri([0,-1,0],b,a,[0,-1,0]);if(top)tri([0,1,0],d,e,[0,1,0]);}
  }else if(kind==='disc'){
   for(let k=0;k<32;k++){const u=k*Math.PI/16,v=(k+1)*Math.PI/16;tri([0,0,0],[Math.cos(u),0,Math.sin(u)],[Math.cos(v),0,Math.sin(v)],[0,1,0]);}
- }else if(kind==='torus'){
-  const point=(u,v)=>[(1+.1*Math.cos(v))*Math.cos(u),.1*Math.sin(v),(1+.1*Math.cos(v))*Math.sin(u)],normal=(u,v)=>[Math.cos(v)*Math.cos(u),Math.sin(v),Math.cos(v)*Math.sin(u)];
+ }else if(kind==='arc'||kind==='arc-core'){
+  // A solid crescent ribbon in XY, with front/back faces and a visible rim.
+  for(let i=0;i<36;i++){
+   const a=-Math.PI*.75+i*Math.PI*1.2/36,b=-Math.PI*.75+(i+1)*Math.PI*1.2/36,inner=kind==='arc-core'?.975:.91;
+   const point=(t,r,z)=>[Math.cos(t)*r,Math.sin(t)*r,z],n=[0,0,1];
+   quad(point(a,inner,.045),point(b,inner,.045),point(b,1,.045),point(a,1,.045),n);
+   quad(point(a,1,-.045),point(b,1,-.045),point(b,inner,-.045),point(a,inner,-.045),[0,0,-1]);
+   quad(point(a,1,.045),point(b,1,.045),point(b,1,-.045),point(a,1,-.045),[Math.cos(a),Math.sin(a),0]);
+  }
+ }else if(kind==='torus'||kind==='energy-ring'){
+  const tube=kind==='energy-ring'?.027:.1,point=(u,v)=>[(1+tube*Math.cos(v))*Math.cos(u),tube*Math.sin(v),(1+tube*Math.cos(v))*Math.sin(u)],normal=(u,v)=>[Math.cos(v)*Math.cos(u),Math.sin(v),Math.cos(v)*Math.sin(u)];
   for(let k=0;k<24;k++)for(let j=0;j<6;j++){const u=k*Math.PI/12,U=(k+1)*Math.PI/12,v=j*Math.PI/3,V=(j+1)*Math.PI/3,a=point(u,v),b=point(U,v),c=point(U,V),d=point(u,V),na=normal(u,v),nb=normal(U,v),nc=normal(U,V),nd=normal(u,V);tri(a,b,c,na,nb,nc);tri(a,c,d,na,nc,nd);}
  }else if(kind==='wedge'){
   quad([-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[0,0,-1]);quad([-1,-1,1],[-1,-1,-1],[-1,1,-1],[-1,1,1],[-1,0,0]);quad([1,-1,-1],[1,-1,1],[1,1,1],[1,1,-1],[1,0,0]);quad([-1,-1,1],[1,-1,1],[1,-1,-1],[-1,-1,-1],[0,-1,0]);tri([-1,1,-1],[1,1,-1],[0,-1,1],unit([0,1,1]));
@@ -49,9 +72,9 @@ export function createMeshRenderer(canvas,{preserve=false}={}){
  const compile=(type,source)=>{const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh));return sh;};
  const vs=compile(gl.VERTEX_SHADER,VERTEX),fs=compile(gl.FRAGMENT_SHADER,FRAGMENT),program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));
  gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
- const names=['uModel','uVP','uNormal','uColor','uEye','uFog','uEmission'],uniform=Object.fromEntries(names.map(n=>[n,gl.getUniformLocation(program,n)]));
+ const names=['uModel','uVP','uNormal','uColor','uEye','uFog','uEmission','uExposure','uPointPosition','uPointColor','uPointPower'],uniform=Object.fromEntries(names.map(n=>[n,gl.getUniformLocation(program,n)]));
  const ap=gl.getAttribLocation(program,'aPosition'),an=gl.getAttribLocation(program,'aNormal');gl.enableVertexAttribArray(ap);gl.enableVertexAttribArray(an);
- const meshes=new Map();let current=identity(),stack=[],queue=[],eye=[8,8,16],viewProjection=identity(),fog=rgb('#d0ded5'),disposed=false;
+ const meshes=new Map();let current=identity(),stack=[],queue=[],eye=[8,8,16],viewProjection=identity(),fog=rgb('#d0ded5'),disposed=false,lighting={};
  function buffer(kind){if(meshes.has(kind))return meshes.get(kind);const g=geometry(kind),p=gl.createBuffer(),n=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,p);gl.bufferData(gl.ARRAY_BUFFER,g.positions,gl.STATIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,n);gl.bufferData(gl.ARRAY_BUFFER,g.normals,gl.STATIC_DRAW);const b={p,n,count:g.count};meshes.set(kind,b);return b;}
  const api={
   push(){stack.push(current);current=new Float32Array(current);},pop(){if(!stack.length)throw new Error('Unbalanced 3D transform');current=stack.pop();},
@@ -60,17 +83,19 @@ export function createMeshRenderer(canvas,{preserve=false}={}){
   rotateX(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[5]=c;m[6]=s;m[9]=-s;m[10]=c;current=multiply(current,m);},
   rotateY(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[2]=-s;m[8]=s;m[10]=c;current=multiply(current,m);},
   rotateZ(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[1]=s;m[4]=-s;m[5]=c;current=multiply(current,m);},
-  mesh(kind,color,emission=0,alpha=1){if(alpha<=.005)return;queue.push({kind,color:rgb(color),emission,alpha:Math.max(0,Math.min(1,alpha)),matrix:new Float32Array(current)});},
+  mesh(kind,color,emission=0,alpha=1,blend='normal'){if(alpha<=.005)return;queue.push({kind,color:rgb(color),emission,alpha:Math.max(0,Math.min(1,alpha)),blend,matrix:new Float32Array(current)});},
   begin({width=canvas.width,height=canvas.height,background='#d0ded5',camera=[0,2.5,18],target=[0,2.5,0],span=18,fov}={}){
-   if(disposed)return;current=identity();stack=[];queue=[];eye=camera;fog=rgb(background);const cw=Math.max(1,Math.round(width)),ch=Math.max(1,Math.round(height));if(canvas.width!==cw)canvas.width=cw;if(canvas.height!==ch)canvas.height=ch;
+   if(disposed)return;current=identity();stack=[];queue=[];lighting={};eye=camera;fog=rgb(background);const cw=Math.max(1,Math.round(width)),ch=Math.max(1,Math.round(height));if(canvas.width!==cw)canvas.width=cw;if(canvas.height!==ch)canvas.height=ch;
    gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(...fog,1);gl.depthMask(true);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);viewProjection=cameraMatrix({camera,target,span,fov},canvas.width,canvas.height);
   },
   project(point,width=canvas.width,height=canvas.height){return projectPoint(viewProjection,point,width,height);},
+  lighting(value){lighting=value||{};},
   flush(){
-   if(disposed)return;gl.useProgram(program);gl.uniformMatrix4fv(uniform.uVP,false,viewProjection);gl.uniform3fv(uniform.uEye,eye);gl.uniform3fv(uniform.uFog,fog);let bound=null;
-   const opaque=queue.filter(q=>q.alpha>=.995),transparent=queue.filter(q=>q.alpha<.995).sort((a,b)=>Math.hypot(...b.matrix.slice(12,15).map((x,i)=>x-eye[i]))-Math.hypot(...a.matrix.slice(12,15).map((x,i)=>x-eye[i])));
-   for(const list of [opaque,transparent]){gl.depthMask(list===opaque);for(const q of list){const b=buffer(q.kind);if(bound!==b){gl.bindBuffer(gl.ARRAY_BUFFER,b.p);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,b.n);gl.vertexAttribPointer(an,3,gl.FLOAT,false,0,0);bound=b;}gl.uniformMatrix4fv(uniform.uModel,false,q.matrix);gl.uniformMatrix3fv(uniform.uNormal,false,normals(q.matrix));gl.uniform4f(uniform.uColor,...q.color,q.alpha);gl.uniform1f(uniform.uEmission,q.emission);gl.drawArrays(gl.TRIANGLES,0,b.count);}}
-   gl.depthMask(true);return queue.length;
+   if(disposed)return;gl.useProgram(program);gl.uniformMatrix4fv(uniform.uVP,false,viewProjection);gl.uniform3fv(uniform.uEye,eye);gl.uniform3fv(uniform.uFog,fog);
+   gl.uniform1f(uniform.uExposure,lighting.exposure??1);gl.uniform3fv(uniform.uPointPosition,lighting.position||[0,0,0]);gl.uniform3fv(uniform.uPointColor,rgb(lighting.color||'#ffffff'));gl.uniform1f(uniform.uPointPower,lighting.power||0);let bound=null;
+   const opaque=queue.filter(q=>q.alpha>=.995&&q.blend!=='add'),transparent=queue.filter(q=>q.alpha<.995||q.blend==='add').sort((a,b)=>Math.hypot(...b.matrix.slice(12,15).map((x,i)=>x-eye[i]))-Math.hypot(...a.matrix.slice(12,15).map((x,i)=>x-eye[i])));
+   for(const list of [opaque,transparent]){gl.depthMask(list===opaque);for(const q of list){gl.blendFunc(gl.SRC_ALPHA,q.blend==='add'?gl.ONE:gl.ONE_MINUS_SRC_ALPHA);const b=buffer(q.kind);if(bound!==b){gl.bindBuffer(gl.ARRAY_BUFFER,b.p);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,b.n);gl.vertexAttribPointer(an,3,gl.FLOAT,false,0,0);bound=b;}gl.uniformMatrix4fv(uniform.uModel,false,q.matrix);gl.uniformMatrix3fv(uniform.uNormal,false,normals(q.matrix));gl.uniform4f(uniform.uColor,...q.color,q.alpha);gl.uniform1f(uniform.uEmission,q.emission);gl.drawArrays(gl.TRIANGLES,0,b.count);}}
+   gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(true);return queue.length;
   },
   destroy(){if(disposed)return;disposed=true;for(const b of meshes.values()){gl.deleteBuffer(b.p);gl.deleteBuffer(b.n);}meshes.clear();gl.deleteProgram(program);queue=[];},
   get canvas(){return canvas;},get gl(){return gl;}

@@ -1,9 +1,10 @@
-import {createBattleVfx} from './combat-vfx.mjs?v=2.0.1';
-import {weaponArt} from './art.mjs?v=2.0.1';
-import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=2.0.1';
-import {createMotionClock} from './motion-clock.mjs?v=2.0.1';
-import {sampleCombatLabels,labelLifetime,presentationDuration} from './combat-presentation.mjs?v=2.0.1';
-import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=2.0.1';
+import {createBattleVfx} from './combat-vfx.mjs?v=2.1.0';
+import {weaponArt} from './art.mjs?v=2.1.0';
+import {GUARD,handArt,bindRig,applyRigPose} from './fighter-rig.mjs?v=2.1.0';
+import {createMotionClock} from './motion-clock.mjs?v=2.1.0';
+import {sampleSpectacle,createCinematicLayer} from './combat-spectacle.mjs?v=2.1.0';
+import {sampleCombatLabels,labelLifetime,presentationDuration} from './combat-presentation.mjs?v=2.1.0';
+import {createCombatSequence,sampleCombat,motionTiming,contactDistance} from './combat-sequence.mjs?v=2.1.0';
 export {motionTiming,contactDistance};
 const STAR='<svg viewBox="0 0 100 100" aria-hidden="true"><path d="m50 1 11 31 29-17-15 29 25 10-30 10 13 29-27-20-15 27-5-34L3 72l20-26L1 26l33 4z" fill="currentColor"/><path d="m50 25 5 19 19 5-19 6-5 20-6-20-18-6 18-5z" fill="#fffcdd"/></svg>';
 // Everything on screen is sampled from one clock. SVG attributes avoid independent CSS/WAAPI timelines.
@@ -27,6 +28,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
   return{width,height,fighters:boxes,ground:{x:width*.5,y:gr?gr.top-sr.top+(gr.height??gr.bottom-gr.top)*.5:height-60}};
  }
  const visualEffects=createBattleVfx(layer);
+ const cinematic=createCinematicLayer(scene);
  let sequence=createCombatSequence(event,layout());
  const labels=sequence.labels.map(()=>fx('timeline-label')),lifetimes=new Map();let lifetime=labelLifetime(speed);
  const actor=event.actor,target=event.target;
@@ -40,6 +42,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
   const v=sampleCombat(sequence,time),pose=reduced?GUARD:v.pose,targetPose=reduced?GUARD:v.targetPose;
   v.labels=sequence.labels.flatMap(label=>{if(time>=label.time&&!lifetimes.has(label.id))lifetimes.set(label.id,lifetime);return sampleCombatLabels([label],time,lifetimes.get(label.id)||lifetime);});
   visualEffects.render(sequence,v,time,reduced);
+  cinematic.render(sampleSpectacle(sequence,time,{reduced}),{width:sequence.layout.width,height:sequence.layout.height,actor:v.actorHand,target:v.hitPoint});
   applyRigPose(rigs[actor],pose);applyRigPose(rigs[target],targetPose);
   if(fighters[actor])fighters[actor].style.transform=reduced?'':`translate(${v.position.x}px,${v.position.y}px)`;
   if(fighters[target])fighters[target].style.transform=reduced?'':`translate(${v.targetPosition.x}px,0)`;
@@ -53,7 +56,7 @@ export function playCombatMotion(event,{speed=1,motion='full',onImpact=()=>{},on
   sparks.forEach((n,i)=>{const s=v.sparks[i];if(s&&!reduced)place(n,s,{size:s.size,angle:s.angle,scale:.5+s.age/220,opacity:s.opacity});else hide(n);});
   labels.forEach((n,i)=>{const l=v.labels.find(label=>label.id===i);if(!n)return;if(!l){hide(n);return;}const box=sequence.layout.fighters[l.who],offset=l.who===actor?v.position:v.targetPosition;n.textContent=l.text;n.className='combat-effect timeline-label '+l.kind;place(n,{x:box.x+(reduced?0:offset.x)+(l.part?22:-12),y:box.top+15+l.lane*24+l.part*22-(reduced?0:l.rise)},{size:140,opacity:l.opacity});n.style.height='24px';});
  }
- function clear(){if(cleaned)return;cleaned=true;visualEffects.destroy();if(pickedFloor)pickedFloor.style.opacity='1';for(const n of created)n.remove();fighters.forEach((f,i)=>{f?.classList.remove('motion-active','motion-target');if(f)f.style.transform='';if(bodies[i])bodies[i].style.transform='';applyRigPose(rigs[i],GUARD);if(shadows[i]){shadows[i].setAttribute('transform','');shadows[i].style.opacity='';}if(hands[i])hands[i].style.opacity='1';});window.removeEventListener?.('resize',resize);}
+ function clear(){if(cleaned)return;cleaned=true;visualEffects.destroy();cinematic.destroy();if(pickedFloor)pickedFloor.style.opacity='1';for(const n of created)n.remove();fighters.forEach((f,i)=>{f?.classList.remove('motion-active','motion-target');if(f)f.style.transform='';if(bodies[i])bodies[i].style.transform='';applyRigPose(rigs[i],GUARD);if(shadows[i]){shadows[i].setAttribute('transform','');shadows[i].style.opacity='';}if(hands[i])hands[i].style.opacity='1';});window.removeEventListener?.('resize',resize);}
  function resize(){if(cleaned)return;sequence=createCombatSequence(event,layout());render(clock?.elapsed||0);}
  window.addEventListener?.('resize',resize);
  clock=createMotionClock({duration:presentationDuration(sequence,sequence.labels,lifetime),rate:speed,cues:sequence.cues,driver,onFrame:render,onCue(cue){if(cue.kind==='impact')onImpact(event.hits>1&&!event.dodged&&cue.part===1?.5:1);else onTransfer();},onFinish(){clear();onFinish();}});

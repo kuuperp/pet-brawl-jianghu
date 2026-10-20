@@ -8,9 +8,10 @@ test('3D labels mount hidden, update only on contact, retain their nodes and fre
  let now=0,id=0;const pending=new Map(),writes=[];
  const driver={now:()=>now,request:fn=>{pending.set(++id,fn);return id;},cancel:key=>pending.delete(key),advance(ms){now+=ms;const q=[...pending.values()];pending.clear();q.forEach(fn=>fn(now));}};
  const gl=new Proxy({COMPILE_STATUS:1,LINK_STATUS:2,getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(_,name)=>name,createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({})},{get:(o,k)=>k in o?o[k]:(...args)=>writes.push([k,...args])});
+ const screenWrites=[],ctx=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:(...args)=>screenWrites.push([k,...args]),set:(o,k,v)=>{o[k]=v;return true;}});
  class Node{
   constructor(){this.style={setProperty(key,value){this[key]=value;}};this.children=[];this.classList={add(){},remove(){}};this.width=0;this.height=0;}
-  getContext(){return gl;}
+  getContext(type){return type==='2d'?ctx:gl;}
   getBoundingClientRect(){return{left:0,top:0,width:800,height:450};}
   setAttribute(){}
   append(node){assert.equal(node.style.opacity,'0','Invisible before insertion into the document');this.children.push(node);node.parent=this;}
@@ -29,13 +30,16 @@ test('3D labels mount hidden, update only on contact, retain their nodes and fre
   assert.equal(scene.children.length,1,'The real 3D path mounted a canvas');
   const hits=[];motion=playCombatMotion(e,{driver,speed:1,onImpact:f=>hits.push(f)});
   const nodes=[...layer.children];assert.ok(nodes.length>=4);assert.ok(nodes.every(n=>n.style.opacity==='0'));
-  driver.advance(879);assert.deepEqual(hits,[]);assert.ok(nodes.every(n=>n.style.opacity==='0'));
+  driver.advance(600);assert.ok(writes.some(w=>w[0]==='uniform1f'&&w[1]==='uExposure'&&w[2]<1));assert.ok(scene.children.some(n=>n.className==='cinematic-canvas'));
+  driver.advance(279);assert.deepEqual(hits,[]);assert.ok(nodes.every(n=>n.style.opacity==='0'));
   driver.advance(1);assert.deepEqual(hits,[.5]);assert.equal(nodes.find(n=>n.textContent==='−16').style.opacity,'1');assert.equal(nodes.find(n=>n.textContent==='−15').style.opacity,'0');
   const firstLeft=nodes.find(n=>n.textContent==='−16').style.left;assert.ok(firstLeft.endsWith('px'),'Floats use the camera projection');
-  motion.pause();const frozen=nodes.map(n=>JSON.stringify(n.style));driver.advance(5000);assert.deepEqual(nodes.map(n=>JSON.stringify(n.style)),frozen);
+  assert.ok(writes.some(w=>w[0]==='uniform1f'&&w[1]==='uPointPower'&&w[2]>0));assert.ok(screenWrites.some(w=>w[0]==='ellipse'));
+  motion.pause();const frozen=nodes.map(n=>JSON.stringify(n.style)),pausedWrites=screenWrites.length;driver.advance(5000);assert.deepEqual(nodes.map(n=>JSON.stringify(n.style)),frozen);assert.equal(screenWrites.length,pausedWrites);
   motion.setMotion('reduced');assert.deepEqual(hits,[.5]);motion.resume();driver.advance(286);
   assert.deepEqual(hits,[.5,1]);assert.deepEqual(layer.children,nodes,'The second hit cannot replace or reset first-hit DOM nodes');
   assert.equal(nodes.find(n=>n.textContent==='−16').style.opacity,'1');assert.equal(nodes.find(n=>n.textContent==='−15').style.opacity,'1');
   motion.setRate(3);driver.advance(1000);assert.equal(layer.children.length,0);assert.deepEqual(hits,[.5,1]);assert.ok(writes.some(w=>w[0]==='drawArrays'));
+  assert.ok(!scene.children.some(n=>n.className==='cinematic-canvas'),'The screen lighting layer is removed after the action');
  }finally{motion?.();destroyScene3D();for(const [key,value]of Object.entries(original))globalThis[key]=value;}
 });
