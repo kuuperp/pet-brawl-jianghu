@@ -1,5 +1,5 @@
-import {profileFor} from './combat-vfx.mjs?v=2.2.0';
-import {duelAnchor} from './duel-rig.mjs?v=2.2.0';
+import {profileFor} from './combat-vfx.mjs?v=2.3.0';
+import {duelAnchor} from './duel-rig.mjs?v=2.3.0';
 const PI=Math.PI,TAU=PI*2,cap=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t;
 const hash=s=>Array.from(String(s)).reduce((h,c)=>(Math.imul(h,31)+c.charCodeAt(0))>>>0,17);
 const smooth=t=>{t=cap(t);return t*t*(3-2*t);};
@@ -124,7 +124,7 @@ export function drawCinematicScreen(c,state,{width,height,actor,target}){
  const shade=cap(state.charge*.25+state.strike*(state.ultimate?.2:.06));
  if(shade>.001){const vignette=c.createRadialGradient(center.x,center.y,Math.min(width,height)*.18,width/2,height/2,Math.max(width,height)*.67);vignette.addColorStop(0,'#10172a00');vignette.addColorStop(1,'#080d20');c.fillStyle=vignette;c.globalAlpha=shade;c.fillRect(0,0,width,height);}
  c.globalCompositeOperation='screen';
- screenGlow(c,center.x,center.y,Math.min(width,height)*(.38+state.strength*.16),color,state.charge*.26+state.flash*1.1);
+ screenGlow(c,center.x,center.y,Math.max(width,height)*(.25+state.strength*.12),color,state.charge*.22+state.flash*1.1);
  if(state.flash>.001){c.globalAlpha=state.flash*.42;c.fillStyle=color;c.fillRect(0,0,width,height);}
  if(state.art&&state.strike>.001){
   const rays=state.ultimate?22:12,unit=Math.min(width,height);
@@ -135,20 +135,30 @@ export function drawCinematicScreen(c,state,{width,height,actor,target}){
   }
  }
  for(const impact of state.impacts){
-  const q=impact.age/650,radius=(.08+q*.72)*Math.min(width,height),alpha=(1-q)**2;
+  const q=impact.age/650,radius=(.04+q*(state.art?1.2:.65))*Math.max(width,height),alpha=(1-q)**2;
   c.globalAlpha=alpha*.55;c.strokeStyle=color;c.lineWidth=2+state.strength;c.beginPath();c.ellipse(target.x,target.y,radius,radius*.62,0,0,TAU);c.stroke();
+  // Perspective fragments leave the arena and sweep over the viewport, with lit faces.
+  if(state.art)for(let i=0;i<(state.ultimate?30:18);i++){
+   const a=i*2.399+state.seed*.013,depth=.35+(i%7)*.12,travel=q*q*Math.max(width,height)*(.5+depth),x=target.x+Math.cos(a)*travel,y=target.y+Math.sin(a)*travel*.65+q*q*height*.16;
+   const size=(2+q*(9+state.strength*3))*depth,turn=a+q*5;
+   c.save();c.translate(x,y);c.rotate(turn);c.globalAlpha=alpha*(.3+depth*.2);
+   c.fillStyle=color;c.beginPath();c.moveTo(0,-size*1.7);c.lineTo(size,0);c.lineTo(0,size);c.lineTo(-size*.45,0);c.closePath();c.fill();
+   c.fillStyle='#fff2d8';c.globalAlpha=alpha*.6;c.beginPath();c.moveTo(0,-size*1.7);c.lineTo(size,0);c.lineTo(0,size*.65);c.closePath();c.fill();c.restore();
+  }
  }
  c.restore();c.globalAlpha=1;
 }
 export function createCinematicLayer(scene){
  if(!scene?.append)return{render(){},destroy(){}};
- const canvas=document.createElement('canvas');canvas.className='cinematic-canvas';canvas.style.opacity='0';canvas.setAttribute('aria-hidden','true');
+ const host=document.body?.append?document.body:scene,fullscreen=host!==scene;
+ const canvas=document.createElement('canvas');canvas.className='cinematic-canvas'+(fullscreen?' viewport-cinematic':'');canvas.style.opacity='0';canvas.setAttribute('aria-hidden','true');
  const ctx=canvas.getContext?.('2d');if(!ctx)return{render(){},destroy(){}};
- scene.append(canvas);let oldWidth=0,oldHeight=0;
+ host.append(canvas);let oldWidth=0,oldHeight=0;
  return{render(state,frame){
-  const {width,height}=frame,ratio=Math.min(1.5,globalThis.devicePixelRatio||1);
+  const rect=scene.getBoundingClientRect?.()||{left:0,top:0},width=fullscreen?(globalThis.innerWidth||document.documentElement?.clientWidth||frame.width):frame.width,height=fullscreen?(globalThis.innerHeight||document.documentElement?.clientHeight||frame.height):frame.height,ratio=Math.min(1.5,globalThis.devicePixelRatio||1);
   if(oldWidth!==width||oldHeight!==height){oldWidth=width;oldHeight=height;canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);}
-  const actor=frame.project?frame.project(frame.anchors.actor):frame.actor,target=frame.project?frame.project(frame.anchors.target):frame.target;
+  const localActor=frame.project?frame.project(frame.anchors.actor):frame.actor,localTarget=frame.project?frame.project(frame.anchors.target):frame.target;
+  const point=p=>({x:p.x+(fullscreen?(rect.left||0):0),y:p.y+(fullscreen?(rect.top||0):0)}),actor=point(localActor),target=point(localTarget);
   canvas.style.opacity=state.reduced?'0':'1';drawCinematicScreen(ctx,state,{width,height,actor,target});
  },destroy(){canvas.remove();}};
 }

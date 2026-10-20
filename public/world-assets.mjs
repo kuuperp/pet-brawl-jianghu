@@ -1,11 +1,13 @@
 // Sculpted game assets. Every visible part is a lit 3D mesh; no billboard characters.
-import {ARENA_LENGTH_SCALE} from './battle-layout.mjs?v=2.2.0';
+import {drawHero,HERO_PALETTES} from './hero-models.mjs?v=2.3.0';
+import {ARENA_LENGTH_SCALE} from './battle-layout.mjs?v=2.3.0';
 const PI=Math.PI, TAU=PI*2, RAD=PI/180;
 const finite=(x,f=0)=>Number.isFinite(x)?x:f;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const hash=s=>Array.from(String(s)).reduce((a,c)=>(Math.imul(a,31)+c.charCodeAt(0))>>>0,17);
 function part(r,kind,color,x=0,y=0,z=0,sx=1,sy=sx,sz=sx,rx=0,ry=0,rz=0,light=0,alpha=1){
- r.push();r.translate(x,y,z);if(rx)r.rotateX(rx);if(ry)r.rotateY(ry);if(rz)r.rotateZ(rz);r.scale(sx,sy,sz);r.mesh(kind,color,light,alpha);r.pop();
+ const metal=[GOLD,DARK_GOLD,METAL,DARK_METAL].includes(color);
+ r.push();r.translate(x,y,z);if(rx)r.rotateX(rx);if(ry)r.rotateY(ry);if(rz)r.rotateZ(rz);r.scale(sx,sy,sz);r.mesh(kind,color,light,alpha,'normal',{roughness:metal?.3:.78,metalness:metal?.65:0});r.pop();
 }
 function group(r,x,y,z,rx,ry,rz,fn){
  r.push();r.translate(x,y,z);if(rx)r.rotateX(rx);if(ry)r.rotateY(ry);if(rz)r.rotateZ(rz);fn();r.pop();
@@ -16,12 +18,7 @@ function rod(r,c,x,y,z,rx,hy,rz=rx,ax=0,ay=0,az=0,light=0){part(r,'cylinder',c,x
 function ring(r,c,x,y,z,sx,sy=sx,sz=sx,ax=0,ay=0,az=0,light=0,alpha=1){part(r,'torus',c,x,y,z,sx,sy,sz,ax,ay,az,light,alpha);}
 function cone(r,c,x,y,z,sx,sy=sx,sz=sx,rx=0,ry=0,rz=0,light=0){part(r,'cone',c,x,y,z,sx,sy,sz,rx,ry,rz,light);}
 
-export const PET_MATERIALS={
- penguin:{body:'#467783',shade:'#315f70',belly:'#fff0d4',foot:'#f5b951',scarf:'#e77659',eye:'#152a38',cheek:'#ec9d8d'},
- panda:{body:'#fff2d8',shade:'#3b514d',belly:'#fff5dd',foot:'#344c49',scarf:'#87aa83',eye:'#122a2b',cheek:'#e7ada0'},
- cat:{body:'#edb775',shade:'#cd8d50',belly:'#ffecc6',foot:'#df9d5e',scarf:'#dc7259',eye:'#2d342e',cheek:'#e5a28a'},
- rabbit:{body:'#fce8df',shade:'#e5c4c3',belly:'#fff4df',foot:'#f0d4ce',scarf:'#b97d9d',eye:'#45364a',cheek:'#e8a9b6'}
-};
+export const PET_MATERIALS=HERO_PALETTES;
 const GOLD='#e4b962', DARK_GOLD='#a57e41', METAL='#bfd4d6', DARK_METAL='#344654', WOOD='#825a3e';
 const weaponColors=['#8cc9ab','#e7a86f','#b8adf2','#7cbed8','#e28e86','#d4bc75','#9dd6c4','#e7a1bf'];
 const swordIds=new Set(['blade','jade-sword','frost-sword','dawn-sword','dragon-sword','sun-sword','thunder-sword','blood-sword','star-sword','soul-sword','void-sword','heaven-sword','sword','rapier']);
@@ -274,67 +271,6 @@ export function drawWeapon(r,id,options={}){
  r.pop();
 }
 
-function face(r,pet,p,profile=false){
- const fur=p.body,ink=p.eye;
- ball(r,fur,0,2.6,0,.8,.69,.61);
- if(pet==='penguin'){
-  ball(r,p.belly,0,2.48,.48,.62,.5,.18);
-  cone(r,p.foot,0,2.37,.79,.19,.19,.21,PI/2);
-  for(const x of [-.12,.12])cone(r,fur,x,3.24,-.04,.11,.2,.11,0,0,x);
- }else if(pet==='panda'){
-  for(const side of [-1,1]){
-   ball(r,p.shade,side*.61,3.11,-.03,.23,.24,.18);
-   part(r,'sphere',p.shade,side*.3,2.61,.54,.21,.27,.075,0,0,-side*.22);
-  }
-  ball(r,p.belly,0,2.35,.6,.35,.23,.13);
-  ball(r,p.shade,0,2.43,.75,.1,.065,.055);
- }else if(pet==='cat'){
-  for(const side of [-1,1]){
-   cone(r,fur,side*.55,3.18,-.01,.3,.36,.22,0,0,-side*.15);
-   cone(r,'#d5958c',side*.55,3.18,.19,.16,.22,.025,0,0,-side*.15);
-   for(let i=0;i<2;i++)box(r,p.shade,side*.69,2.39+i*.09,.58,.15,.012,.012,0,0,side*(i?-.2:.2));
-  }
-  for(const x of [-.2,0,.2])box(r,p.shade,x,3.04,.43,.033,.12,.014,0,0,x*.5);
-  ball(r,'#aa6e65',0,2.4,.69,.09,.06,.05);
- }else{
-  for(const side of [-1,1]){
-   part(r,'sphere',fur,side*.35,3.44,-.02,.19,.63,.17,0,0,-side*.16);
-   part(r,'sphere','#dda4b1',side*.36,3.49,.13,.09,.43,.035,0,0,-side*.16);
-  }
-  ball(r,'#b77e9e',0,2.4,.68,.075,.055,.05);
- }
- const eyeColor=pet==='panda'?'#fff4da':ink;
- if(!profile)for(const side of [-1,1]){
-  ball(r,eyeColor,side*.29,2.62,.621,.065,.095,.035);
-  ball(r,'#ffffff',side*.275,2.66,.651,.019,.026,.01,.2);
-  ball(r,p.cheek,side*.51,2.38,.54,.115,.055,.025);
- }
- if(!profile){box(r,ink,-.05,2.24,.63,.055,.016,.015,0,0,-.22);box(r,ink,.05,2.24,.63,.055,.016,.015,0,0,.22);}
-}
-function leg(r,p,pose,front,profile=false){
- const side=front?1:-1,k=front?'f':'b',upper=finite(pose['l'+k],front?-15:22),lower=finite(pose['k'+k],front?15:-18);
- group(r,profile?side*.06:side*.27,1.06,profile?(front?.30:-.30):(front?.11:-.08),0,0,-upper*RAD,()=>{
-  ball(r,p.body,0,-.17,0,.22,.29,.22);
-  group(r,0,-.38,0,0,0,-lower*RAD,()=>{
-   ball(r,p.shade,0,-.15,0,.175,.24,.175);
-   rod(r,p.scarf,0,-.26,0,.18,.065,.18);
-   ball(r,p.foot,profile?.17:.04,-.43,profile?0:.12,profile?.35:.27,.15,profile?.21:.31);
-  });
- });
-}
-function arm(r,p,pose,front,held,armored,armorColor,profile=false){
- const k=front?'f':'b',up=finite(pose['a'+k],front?-28:22),elbow=finite(pose['e'+k],front?-72:-75);
- group(r,profile?(front?.1:-.1):(front?.53:-.53),1.94,profile?(front?.50:-.48):(front?.23:-.13),0,0,-up*RAD,()=>{
-  ball(r,armored?armorColor:p.shade,0,-.06,0,.24,.24,.24);
-  ball(r,p.shade,0,-.23,0,.18,.29,.18);
-  group(r,0,-.43,0,0,0,-elbow*RAD,()=>{
-   ball(r,p.shade,0,-.2,0,.17,.25,.17);
-   rod(r,armored?GOLD:p.scarf,0,-.32,0,.19,.065,.19);
-   ball(r,p.body,0,-.42,0,.21,.19,.21);
-   if(front&&held)group(r,.06,-.4,.02,0,.12,(profile?PI:0)-.2,()=>drawWeapon(r,held,{scale:armored?1.08:.87}));
-  });
- });
-}
 function bossArmor(r,f,p,time){
  const chapter=Math.max(0,finite(f.chapter)),style=typeof f.bossStyle==='string'?hash(f.bossStyle)%6:chapter%6,big=f.chapterBoss===true;
  const accent=['#a9d5bd','#eac281','#e0a1c9','#92c8dc','#c4a7ef','#f09d76'][chapter%6];
@@ -379,57 +315,7 @@ function bossArmor(r,f,p,time){
 }
 
 export function drawCharacter(r,fighter={},pose={},options={}){
- const pet=PET_MATERIALS[fighter.pet]?fighter.pet:'penguin',p=PET_MATERIALS[pet],faceDir=options.facing===-1?-1:1;
- const armored=!!fighter.boss,chapter=Math.max(0,finite(fighter.chapter)),armorColor=['#456777','#637454','#6b4d72','#476c87','#626080','#704f48'][chapter%6];
- const t=finite(options.time),scale=clamp(finite(options.scale,finite(fighter.modelScale,1)),.15,4),dead=clamp(finite(options.dead),0,1);
- const held=Object.hasOwn(options,'held')?options.held:(fighter.held??fighter.weapons?.[0]),profile=options.profile==='duel';
- r.push();r.translate(finite(options.x),finite(options.y),finite(options.z));
- // Ground contact is independent of body rocking and articulation.
- part(r,'disc','#233944',0,.018,0,.66*scale,1,.34*scale,0,0,0,0,.23);
- r.rotateY(finite(options.yaw));r.scale(faceDir*scale,scale,scale);
- r.translate(0,finite(pose.y)*-.012,0);
- r.rotateZ(-finite(pose.body)*RAD-dead*1.35);
- if(dead)r.translate(-dead*.6,-dead*.58,0);
- leg(r,p,pose,false,profile);
- arm(r,p,pose,false,null,armored,armorColor,profile);
- r.push();if(profile)r.rotateY(PI/2);
- if(pet==='cat'){
-  group(r,-.47,1.25,-.3,.2,.4,-.6,()=>{ball(r,p.body,0,-.3,0,.12,.42,.12);ball(r,p.shade,-.12,-.58,0,.16,.17,.14);});
- }
- ball(r,p.body,0,1.55,0,.64,.75,.44);
- ball(r,p.belly,0,1.5,.36,.43,.56,.13);
- if(pet==='penguin')ball(r,p.body,0,1.04,-.24,.34,.25,.25);
- if(pet==='rabbit')ball(r,'#fff5e5',0,1.06,-.45,.24,.24,.22);
- r.pop();leg(r,p,pose,true,profile);
- const breathe=Math.sin(t*2.8)*.012;
- group(r,0,2.13,0,0,0,-finite(pose.head)*RAD,()=>{
-  r.translate(0,-2.13+breathe,0);
-  r.push();if(profile)r.rotateY(PI/2);face(r,pet,p,profile);r.pop();
-  if(profile){
-   if(pet==='panda')ball(r,p.shade,.35,2.61,.58,.18,.24,.085);
-   ball(r,pet==='panda'?'#fff4da':p.eye,.42,2.65,pet==='panda'?.68:.61,.049,.086,.028);
-   ball(r,'#ffffff',.436,2.68,pet==='panda'?.707:.639,.014,.021,.008,.2);
-   ball(r,p.cheek,.35,2.42,.62,.1,.045,.026);
-   box(r,p.eye,.59,2.28,.48,.068,.014,.015,0,0,-.15);
-  }
- });
- r.push();if(profile)r.rotateY(PI/2);
- // Knit scarf with thickness, knot and two hanging fabric tails.
- rod(r,p.scarf,0,2.04,0,.57,.105,.39);
- ball(r,p.scarf,.42,1.97,.3,.18,.17,.12);
- box(r,p.scarf,.53,1.75,.24,.14,.24,.04,.2,0,-.28);
- box(r,p.scarf,.65,1.8,.15,.1,.2,.035,.2,0,-.6);
- if(armored)bossArmor(r,fighter,p,t);
- r.pop();arm(r,p,pose,true,held,armored,armorColor,profile);
- if(finite(options.hit)>0){
-  const h=clamp(options.hit,0,1);ring(r,'#ffe7bd',0,1.7,0,.92,.92,.92,PI/2,0,0,h*.7,h*.5);
- }
- if(fighter.relic){
-  group(r,-.52,1.45,.44,0,0,.1,()=>{
-   box(r,'#9d75bd',0,0,0,.16,.2,.07);box(r,GOLD,0,0,.075,.11,.15,.02);ball(r,'#f4d78d',0,.03,.11,.055,.07,.025,.4);
-  });
- }
- r.pop();
+ drawHero(r,fighter,pose,options,{drawWeapon,drawBossArmor:bossArmor});
 }
 
 export const ARENA_THEMES={

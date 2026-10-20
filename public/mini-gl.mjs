@@ -19,26 +19,49 @@ export function rgb(c){if(Array.isArray(c))return c;const key=c||'#ffffff';if(co
 const VERTEX=`attribute vec3 aPosition;attribute vec3 aNormal;uniform mat4 uModel;uniform mat4 uVP;uniform mat3 uNormal;varying mediump vec3 vPosition;varying mediump vec3 vNormal;void main(){vec4 p=uModel*vec4(aPosition,1.0);vPosition=p.xyz;vNormal=normalize(uNormal*aNormal);gl_Position=uVP*p;}`;
 const FRAGMENT=`precision mediump float;
 uniform vec4 uColor;uniform vec3 uEye;uniform vec3 uFog;uniform float uEmission;
-uniform float uExposure;uniform vec3 uPointPosition;uniform vec3 uPointColor;uniform float uPointPower;
+uniform float uExposure;uniform vec3 uPointPosition;uniform vec3 uPointColor;uniform float uPointPower;uniform float uRoughness;uniform float uMetalness;
 varying mediump vec3 vPosition;varying mediump vec3 vNormal;
 void main(){
- vec3 n=normalize(vNormal),light=normalize(vec3(-0.6,1.0,0.8));
+ vec3 n=normalize(vNormal),light=normalize(vec3(-0.65,1.0,0.9));
  float diffuse=max(0.0,dot(n,light)),hemi=0.5+0.5*n.y;
  vec3 view=normalize(uEye-vPosition),halfVector=normalize(light+view);
- float rim=pow(1.0-max(dot(view,n),0.0),3.0),spec=pow(max(dot(n,halfVector),0.0),36.0);
+ float rim=pow(1.0-max(dot(view,n),0.0),3.0),spec=pow(max(dot(n,halfVector),0.0),mix(90.0,9.0,uRoughness));
+ float fill=max(dot(n,normalize(vec3(0.8,0.35,0.5))),0.0),back=max(dot(n,normalize(vec3(0.3,0.7,-1.0))),0.0);
  vec3 ray=uPointPosition-vPosition;float distance2=dot(ray,ray);
  float point=max(dot(n,normalize(ray+vec3(0.0001))),0.0)*uPointPower/(1.0+distance2*0.28);
- vec3 lit=(uColor.rgb*(0.40+0.21*hemi+0.48*diffuse)+vec3(1.0,0.94,0.8)*spec*0.16+uColor.rgb*rim*0.10)*uExposure;
- lit+=uColor.rgb*uEmission+uPointColor*(uColor.rgb*0.65+0.2)*point;
+ vec3 specular=mix(vec3(1.0,0.94,0.83),uColor.rgb,uMetalness)*spec*mix(0.36,0.055,uRoughness);
+ vec3 ambient=mix(vec3(0.23,0.29,0.35),vec3(0.39,0.43,0.47),hemi);
+ vec3 lit=(uColor.rgb*(ambient+vec3(1.0,0.89,0.73)*diffuse*0.56+vec3(0.65,0.79,1.0)*fill*0.18)+specular+vec3(0.70,0.84,1.0)*(back*0.14+rim*0.07))*uExposure;
+ lit+=uColor.rgb*uEmission+uPointColor*(uColor.rgb*0.68+0.12)*point;
+ lit=lit/(vec3(1.0)+max(lit-vec3(0.88),vec3(0.0))*0.55);
  float fog=smoothstep(26.0,65.0,length(uEye-vPosition));gl_FragColor=vec4(mix(lit,uFog,fog),uColor.a);
 }`;
 export function geometry(kind){
  const pos=[],norm=[];
  const tri=(a,b,c,na,nb=na,nc=na)=>{pos.push(...a,...b,...c);norm.push(...na,...nb,...nc);};
  const quad=(a,b,c,d,n)=>{tri(a,b,c,n);tri(a,c,d,n);};
- if(kind==='sphere'){
+ if(['hero-head','tunic','sleeve','boot','rabbit-ear','cloth','cat-ear'].includes(kind)){
+  const profiles={
+   'hero-head':[[-1,.14,.25],[-.87,.53,.57],[-.57,.86,.85],[-.15,1,1],[.3,.98,.94],[.66,.79,.76],[.91,.43,.43],[1,.015,.015]],
+   tunic:[[-1,.85,.94],[-.88,1,1],[-.62,.96,.96],[-.2,.85,.86],[.2,.86,.87],[.64,1,.94],[.85,.93,.82],[1,.57,.57]],
+   sleeve:[[-1,.78,.78],[-.85,.85,.85],[-.3,.88,.88],[.4,1,1],[.85,.85,.85],[1,.2,.2]],
+   boot:[[-1,.62,.82],[-.8,.91,1],[-.25,1,1],[.2,.77,.8],[.75,.65,.7],[1,.55,.6]],
+   'rabbit-ear':[[-1,.38,.6],[-.7,.85,.95],[-.15,1,1],[.4,.76,.85],[.8,.38,.5],[1,.02,.02]],
+   'cat-ear':[[-1,1,1],[-.55,.83,.78],[0,.55,.51],[.55,.27,.26],[1,.005,.005]]
+  };
+  if(kind==='cloth'){
+   const point=(u,v)=>[(u*2-1)*(1-v*.18),v*2-1,Math.sin(u*Math.PI*3)*.13+(1-v)*.24];
+   const normal=(u,v)=>unit([-Math.cos(u*Math.PI*3)*.39, .12,1]);
+   for(let j=0;j<8;j++)for(let k=0;k<10;k++){const u=k/10,U=(k+1)/10,v=j/8,V=(j+1)/8;tri(point(u,v),point(U,v),point(U,V),normal(u,v),normal(U,v),normal(U,V));tri(point(u,v),point(U,V),point(u,V),normal(u,v),normal(U,V),normal(u,V));}
+  }else{
+   const profile=profiles[kind],sample=y=>{let i=1;while(i<profile.length-1&&y>profile[i][0])i++;const a=profile[i-1],b=profile[i],t=(y-a[0])/(b[0]-a[0]);const prev=profile[Math.max(0,i-2)],next=profile[Math.min(profile.length-1,i+1)],dy=b[0]-a[0];return[1,2].map(k=>{const m=(b[k]-prev[k])/(b[0]-prev[0]),n=(next[k]-a[k])/(next[0]-a[0]);return Math.max(.005,(2*t**3-3*t*t+1)*a[k]+(t**3-2*t*t+t)*dy*m+(-2*t**3+3*t*t)*b[k]+(t**3-t*t)*dy*n);});};
+   const point=(u,y)=>{const [x,z]=sample(y);return[Math.cos(u)*x,y,Math.sin(u)*z+(kind==='rabbit-ear'?.14*(y+1)**2:0)];};
+   const normal=(u,y)=>{const e=.002,a=point(u+e,y),b=point(u-e,y),c=point(u,Math.min(.999,y+e)),d=point(u,Math.max(-.999,y-e));return unit(cross(c.map((v,i)=>v-d[i]),a.map((v,i)=>v-b[i])));};
+   for(let j=0;j<32;j++)for(let k=0;k<28;k++){const u=k*Math.PI/14,U=(k+1)*Math.PI/14,y=-1+j/16,Y=-1+(j+1)/16,a=point(u,y),b=point(U,y),c=point(U,Y),d=point(u,Y);tri(a,c,b,normal(u,y),normal(U,Y),normal(U,y));tri(a,d,c,normal(u,y),normal(u,Y),normal(U,Y));}
+  }
+ }else if(kind==='sphere'){
   const point=(u,v)=>[Math.sin(v)*Math.cos(u),Math.cos(v),Math.sin(v)*Math.sin(u)];
-  for(let j=0;j<10;j++)for(let k=0;k<16;k++){const a=point(k*Math.PI/8,j*Math.PI/10),b=point((k+1)*Math.PI/8,j*Math.PI/10),c=point((k+1)*Math.PI/8,(j+1)*Math.PI/10),d=point(k*Math.PI/8,(j+1)*Math.PI/10);tri(a,b,c,a,b,c);tri(a,c,d,a,c,d);}
+  for(let j=0;j<16;j++)for(let k=0;k<24;k++){const a=point(k*Math.PI/12,j*Math.PI/16),b=point((k+1)*Math.PI/12,j*Math.PI/16),c=point((k+1)*Math.PI/12,(j+1)*Math.PI/16),d=point(k*Math.PI/12,(j+1)*Math.PI/16);tri(a,b,c,a,b,c);tri(a,c,d,a,c,d);}
  }else if(kind==='cylinder'||kind==='cone'){
   const top=kind==='cone'?0:1;
   for(let k=0;k<16;k++){const u=k*Math.PI/8,v=(k+1)*Math.PI/8,c=Math.cos(u),s=Math.sin(u),C=Math.cos(v),S=Math.sin(v),a=[c,-1,s],b=[C,-1,S],d=[c*top,1,s*top],e=[C*top,1,S*top],n=unit([c,kind==='cone'?.5:0,s]),N=unit([C,kind==='cone'?.5:0,S]);tri(a,b,e,n,N,N);tri(a,e,d,n,N,n);tri([0,-1,0],b,a,[0,-1,0]);if(top)tri([0,1,0],d,e,[0,1,0]);}
@@ -72,7 +95,7 @@ export function createMeshRenderer(canvas,{preserve=false}={}){
  const compile=(type,source)=>{const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh));return sh;};
  const vs=compile(gl.VERTEX_SHADER,VERTEX),fs=compile(gl.FRAGMENT_SHADER,FRAGMENT),program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));
  gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
- const names=['uModel','uVP','uNormal','uColor','uEye','uFog','uEmission','uExposure','uPointPosition','uPointColor','uPointPower'],uniform=Object.fromEntries(names.map(n=>[n,gl.getUniformLocation(program,n)]));
+ const names=['uModel','uVP','uNormal','uColor','uEye','uFog','uEmission','uExposure','uPointPosition','uPointColor','uPointPower','uRoughness','uMetalness'],uniform=Object.fromEntries(names.map(n=>[n,gl.getUniformLocation(program,n)]));
  const ap=gl.getAttribLocation(program,'aPosition'),an=gl.getAttribLocation(program,'aNormal');gl.enableVertexAttribArray(ap);gl.enableVertexAttribArray(an);
  const meshes=new Map();let current=identity(),stack=[],queue=[],eye=[8,8,16],viewProjection=identity(),fog=rgb('#d0ded5'),disposed=false,lighting={};
  function buffer(kind){if(meshes.has(kind))return meshes.get(kind);const g=geometry(kind),p=gl.createBuffer(),n=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,p);gl.bufferData(gl.ARRAY_BUFFER,g.positions,gl.STATIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,n);gl.bufferData(gl.ARRAY_BUFFER,g.normals,gl.STATIC_DRAW);const b={p,n,count:g.count};meshes.set(kind,b);return b;}
@@ -83,7 +106,7 @@ export function createMeshRenderer(canvas,{preserve=false}={}){
   rotateX(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[5]=c;m[6]=s;m[9]=-s;m[10]=c;current=multiply(current,m);},
   rotateY(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[2]=-s;m[8]=s;m[10]=c;current=multiply(current,m);},
   rotateZ(a=0){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[1]=s;m[4]=-s;m[5]=c;current=multiply(current,m);},
-  mesh(kind,color,emission=0,alpha=1,blend='normal'){if(alpha<=.005)return;queue.push({kind,color:rgb(color),emission,alpha:Math.max(0,Math.min(1,alpha)),blend,matrix:new Float32Array(current)});},
+  mesh(kind,color,emission=0,alpha=1,blend='normal',material={}){if(alpha<=.005)return;queue.push({kind,color:rgb(color),emission,alpha:Math.max(0,Math.min(1,alpha)),blend,roughness:material.roughness??.68,metalness:material.metalness??0,matrix:new Float32Array(current)});},
   begin({width=canvas.width,height=canvas.height,background='#d0ded5',camera=[0,2.5,18],target=[0,2.5,0],span=18,fov}={}){
    if(disposed)return;current=identity();stack=[];queue=[];lighting={};eye=camera;fog=rgb(background);const cw=Math.max(1,Math.round(width)),ch=Math.max(1,Math.round(height));if(canvas.width!==cw)canvas.width=cw;if(canvas.height!==ch)canvas.height=ch;
    gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(...fog,1);gl.depthMask(true);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);viewProjection=cameraMatrix({camera,target,span,fov},canvas.width,canvas.height);
@@ -94,7 +117,7 @@ export function createMeshRenderer(canvas,{preserve=false}={}){
    if(disposed)return;gl.useProgram(program);gl.uniformMatrix4fv(uniform.uVP,false,viewProjection);gl.uniform3fv(uniform.uEye,eye);gl.uniform3fv(uniform.uFog,fog);
    gl.uniform1f(uniform.uExposure,lighting.exposure??1);gl.uniform3fv(uniform.uPointPosition,lighting.position||[0,0,0]);gl.uniform3fv(uniform.uPointColor,rgb(lighting.color||'#ffffff'));gl.uniform1f(uniform.uPointPower,lighting.power||0);let bound=null;
    const opaque=queue.filter(q=>q.alpha>=.995&&q.blend!=='add'),transparent=queue.filter(q=>q.alpha<.995||q.blend==='add').sort((a,b)=>Math.hypot(...b.matrix.slice(12,15).map((x,i)=>x-eye[i]))-Math.hypot(...a.matrix.slice(12,15).map((x,i)=>x-eye[i])));
-   for(const list of [opaque,transparent]){gl.depthMask(list===opaque);for(const q of list){gl.blendFunc(gl.SRC_ALPHA,q.blend==='add'?gl.ONE:gl.ONE_MINUS_SRC_ALPHA);const b=buffer(q.kind);if(bound!==b){gl.bindBuffer(gl.ARRAY_BUFFER,b.p);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,b.n);gl.vertexAttribPointer(an,3,gl.FLOAT,false,0,0);bound=b;}gl.uniformMatrix4fv(uniform.uModel,false,q.matrix);gl.uniformMatrix3fv(uniform.uNormal,false,normals(q.matrix));gl.uniform4f(uniform.uColor,...q.color,q.alpha);gl.uniform1f(uniform.uEmission,q.emission);gl.drawArrays(gl.TRIANGLES,0,b.count);}}
+   for(const list of [opaque,transparent]){gl.depthMask(list===opaque);for(const q of list){gl.blendFunc(gl.SRC_ALPHA,q.blend==='add'?gl.ONE:gl.ONE_MINUS_SRC_ALPHA);const b=buffer(q.kind);if(bound!==b){gl.bindBuffer(gl.ARRAY_BUFFER,b.p);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,b.n);gl.vertexAttribPointer(an,3,gl.FLOAT,false,0,0);bound=b;}gl.uniformMatrix4fv(uniform.uModel,false,q.matrix);gl.uniformMatrix3fv(uniform.uNormal,false,normals(q.matrix));gl.uniform4f(uniform.uColor,...q.color,q.alpha);gl.uniform1f(uniform.uEmission,q.emission);gl.uniform1f(uniform.uRoughness,q.roughness);gl.uniform1f(uniform.uMetalness,q.metalness);gl.drawArrays(gl.TRIANGLES,0,b.count);}}
    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(true);return queue.length;
   },
   destroy(){if(disposed)return;disposed=true;for(const b of meshes.values()){gl.deleteBuffer(b.p);gl.deleteBuffer(b.n);}meshes.clear();gl.deleteProgram(program);queue=[];},

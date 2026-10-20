@@ -19,19 +19,20 @@ test('3D labels mount hidden, update only on contact, retain their nodes and fre
   appendChild(node){this.prepend(node);}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(n=>n!==this);}
  }
- const scene=new Node(),layer=new Node(),root={querySelector:s=>s==='#scene'?scene:null},state=freshState(),hero=fighterFor(state),battle=new Battle(hero,hero,()=>.5),base=battle.step();
+ const scene=new Node(),layer=new Node(),body=new Node(),root={querySelector:s=>s==='#scene'?scene:null},state=freshState(),hero=fighterFor(state),battle=new Battle(hero,hero,()=>.5),base=battle.step();
  const e={...base,kind:'martial',move:'combo',hits:2,damage:31,absorbed:9,heal:0,counter:0,burn:0,weaponEvent:null,crit:false,dodged:false};
- const original=Object.fromEntries(['document','requestAnimationFrame','cancelAnimationFrame','performance'].map(k=>[k,globalThis[k]]));
+ const original=Object.fromEntries(['document','requestAnimationFrame','cancelAnimationFrame','performance','innerWidth','innerHeight'].map(k=>[k,globalThis[k]]));
  let motion;
  try{
-  globalThis.document={visibilityState:'visible',querySelector:s=>s==='#combat-fx'?layer:s==='#scene'?scene:null,createElement:()=>new Node()};
+  globalThis.innerWidth=1200;globalThis.innerHeight=780;
+  globalThis.document={body,visibilityState:'visible',querySelector:s=>s==='#combat-fx'?layer:s==='#scene'?scene:null,createElement:()=>new Node()};
   globalThis.requestAnimationFrame=driver.request;globalThis.cancelAnimationFrame=driver.cancel;globalThis.performance={now:()=>now};
   mountScene3D(root,state,{display:e.before,selected:{mode:'tower',chapter:0}});
   assert.equal(scene.children.length,1,'The real 3D path mounted a canvas');
   const hits=[];motion=playCombatMotion(e,{driver,speed:1,onImpact:f=>hits.push(f)});
   const nodes=[...layer.children];assert.ok(nodes.length>=4);assert.ok(nodes.every(n=>n.style.opacity==='0'));
-  driver.advance(600);assert.ok(writes.some(w=>w[0]==='uniform1f'&&w[1]==='uExposure'&&w[2]<1));assert.ok(scene.children.some(n=>n.className==='cinematic-canvas'));
-  driver.advance(519);assert.deepEqual(hits,[]);assert.ok(nodes.every(n=>n.style.opacity==='0'));
+  driver.advance(600);assert.ok(writes.some(w=>w[0]==='uniform1f'&&w[1]==='uExposure'&&w[2]<1));const screen=body.children.find(n=>n.className.includes('viewport-cinematic'));assert.ok(screen);assert.equal(screen.width,1200);assert.equal(screen.height,780);assert.equal(scene.children.length,1,'Viewport effects escape the clipped arena');globalThis.innerWidth=1320;globalThis.innerHeight=820;
+  driver.advance(519);assert.equal(screen.width,1320);assert.equal(screen.height,820);assert.deepEqual(hits,[]);assert.ok(nodes.every(n=>n.style.opacity==='0'));
   driver.advance(1);assert.deepEqual(hits,[.5]);assert.equal(nodes.find(n=>n.textContent==='−16').style.opacity,'1');assert.equal(nodes.find(n=>n.textContent==='−15').style.opacity,'0');
   const firstLeft=nodes.find(n=>n.textContent==='−16').style.left;assert.ok(firstLeft.endsWith('px'),'Floats use the camera projection');
   assert.ok(writes.some(w=>w[0]==='uniform1f'&&w[1]==='uPointPower'&&w[2]>0));assert.ok(screenWrites.some(w=>w[0]==='ellipse'));
@@ -40,6 +41,6 @@ test('3D labels mount hidden, update only on contact, retain their nodes and fre
   assert.deepEqual(hits,[.5,1]);assert.deepEqual(layer.children,nodes,'The second hit cannot replace or reset first-hit DOM nodes');
   assert.equal(nodes.find(n=>n.textContent==='−16').style.opacity,'1');assert.equal(nodes.find(n=>n.textContent==='−15').style.opacity,'1');
   motion.setRate(3);driver.advance(1000);assert.equal(layer.children.length,0);assert.deepEqual(hits,[.5,1]);assert.ok(writes.some(w=>w[0]==='drawArrays'));
-  assert.ok(!scene.children.some(n=>n.className==='cinematic-canvas'),'The screen lighting layer is removed after the action');
+  assert.equal(body.children.length,0,'The viewport lighting layer is removed after the action');
  }finally{motion?.();destroyScene3D();for(const [key,value]of Object.entries(original))globalThis[key]=value;}
 });

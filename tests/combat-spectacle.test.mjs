@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Battle,fighterFor,freshState,MARTIAL_ARTS,WEAPONS,CHAPTERS,stageFor} from '../public/engine.mjs';
 import {createCombatSequence} from '../public/combat-sequence.mjs';
+import {martialDetails} from '../public/martial-motion.mjs';
 import {GUARD,POSES} from '../public/fighter-rig.mjs';
 import {BOSS_SKILLS} from '../public/bosses.mjs';
 import {duelAnchor} from '../public/duel-rig.mjs';
@@ -17,14 +18,14 @@ function recording(){
  const r={push(){stack.push(matrix);matrix=new Float32Array(matrix);},pop(){assert.ok(stack.length);matrix=stack.pop();},
  translate(x=0,y=0,z=0){const m=identity();m[12]=x;m[13]=y;m[14]=z;transform(m);},scale(x=1,y=x,z=x){const m=identity();m[0]=x;m[5]=y;m[10]=z;transform(m);},
  rotateX(a){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[5]=c;m[6]=s;m[9]=-s;m[10]=c;transform(m);},rotateY(a){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[2]=-s;m[8]=s;m[10]=c;transform(m);},rotateZ(a){const m=identity(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[1]=s;m[4]=-s;m[5]=c;transform(m);},
- mesh(kind,color,emission,alpha=1,blend){assert.ok([...matrix,emission||0,alpha].every(Number.isFinite));calls.push({kind,color,emission,alpha,blend,matrix:[...matrix],position:[...matrix.slice(12,15)]});}};
+ mesh(kind,color,emission,alpha=1,blend,material={}){assert.ok([...matrix,emission||0,alpha].every(Number.isFinite));calls.push({kind,color,emission,alpha,blend,material,matrix:[...matrix],position:[...matrix.slice(12,15)]});}};
  return{r,calls,get stack(){return stack.length;}};
 }
 test('Duel characters have one visible profile eye and noses pointing toward the opponent',()=>{
  for(const dir of [-1,1]){
   const v=recording();drawCharacter(v.r,{pet:'penguin'},GUARD,{x:dir===1?-3:3,scale:1,facing:dir,profile:'duel',held:null});
   const nose=v.calls.find(c=>c.kind==='cone'&&c.color===PET_MATERIALS.penguin.foot);
-  assert.ok(nose);assert.ok(Math.abs(nose.position[0]-(dir===1?-3:3)-dir*.79)<1e-5);assert.ok(Math.abs(nose.position[2])<1e-5);
+  assert.ok(nose);assert.ok(Math.abs(nose.position[0]-(dir===1?-3:3)-dir*.595)<1e-5);assert.ok(Math.abs(nose.position[2])<1e-5);
   assert.equal(v.calls.filter(c=>c.color==='#ffffff').length,1,'Only the side-facing eye has a highlight');assert.equal(v.stack,0);
  }
 });
@@ -65,4 +66,16 @@ test('Cinematic output uses broad color and brightness layers and is determinist
  const s=createCombatSequence(event({kind:'burst'}),layout),frame=sampleSpectacle(s,s.t.impact+30),layout2d={width:800,height:450,actor:{x:280,y:260},target:{x:540,y:260}};
  const capture=()=>{const calls=[],ctx=new Proxy({createRadialGradient(...args){calls.push(['gradient',...args]);return{addColorStop(...a){calls.push(['stop',...a]);}};}},{get:(o,k)=>k in o?o[k]:(...args)=>{assert.ok(args.every(v=>typeof v!=='number'||Number.isFinite(v)));calls.push([k,...args]);},set:(o,k,v)=>{o[k]=v;calls.push(['set',k,v]);return true;}});drawCinematicScreen(ctx,frame,layout2d);return calls;};
  const first=capture();assert.equal(JSON.stringify(capture()),JSON.stringify(first));assert.ok(first.some(c=>c[0]==='gradient'));assert.ok(first.some(c=>c[0]==='fillRect'&&c[3]===800&&c[4]===450));assert.ok(first.some(c=>c[0]==='ellipse'));
+});
+
+test('Sculpted heroes keep hand and foot contacts attached through hip turns and recovery',()=>{
+ for(const pet of Object.keys(PET_MATERIALS))for(const move of ['combo','crane-kick','double-slash'])for(const dir of [-1,1])for(const p of [.34,.4,.418,.53,.61]){
+  const e=event({move,kind:'martial',hits:2}),s=createCombatSequence(e,layout),base=s.frames.reduce((a,b)=>Math.abs(b.offset-p)<Math.abs(a.offset-p)?b:a).pose,pose=martialDetails(s,p,base),v=recording(),options={x:1,y:.3,z:.1,scale:1.8,facing:dir,profile:'duel',held:null};
+  drawCharacter(v.r,{pet},pose,options);
+  for(const part of ['hand','foot']){const expected=duelAnchor(pose,part,options),nearest=Math.min(...v.calls.filter(c=>c.kind==='sphere'&&c.color===PET_MATERIALS[pet][part==='hand'?'body':'foot']).map(c=>Math.hypot(...c.position.map((x,i)=>x-expected[i]))));assert.ok(nearest<1e-5,`${pet}/${move}/${p}/${part}: ${nearest}`);}
+  assert.equal(v.stack,0);assert.ok(v.calls.some(c=>c.material.roughness>.8));assert.ok(v.calls.some(c=>c.material.metalness>.6));
+ }
+});
+test('New sculpted surfaces have finite outward normals, separate cloth and smooth silhouettes',()=>{
+ for(const kind of ['hero-head','tunic','sleeve','boot','rabbit-ear','cat-ear','cloth']){const g=geometry(kind);assert.ok(g.count>=400,kind);assert.ok([...g.positions,...g.normals].every(Number.isFinite));for(let i=0;i<g.normals.length;i+=3)assert.ok(Math.hypot(...g.normals.slice(i,i+3))>.9,kind);if(kind!=='cloth'){const i=Array.from({length:g.count},(_,i)=>i).filter(i=>Math.abs(g.positions[i*3+1])<.02).reduce((a,b)=>g.positions[b*3]>g.positions[a*3]?b:a);assert.ok(g.normals[i*3]>.5,kind+' faces outward');}}
 });

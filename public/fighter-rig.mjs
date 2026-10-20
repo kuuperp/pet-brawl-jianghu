@@ -1,4 +1,4 @@
-import {weaponArt} from './art.mjs?v=2.2.0';
+import {weaponArt} from './art.mjs?v=2.3.0';
 // The battle rig is separate from portrait art. Nested elbow/knee joints move the actual limbs.
 export const GUARD={body:0,y:0,head:0,af:-28,ef:-72,ab:22,eb:-75,lf:-15,kf:15,lb:22,kb:-18};
 export const POSES={
@@ -65,7 +65,7 @@ export function rigFrames(move='punch'){
  const sequence=[[0,'guard'],[.065,'runA'],[.13,'runB'],[.20,'runA'],[.27,'chamber'],[.34,'chamber'],[.40,'punch'],[.46,'chamber'],[.53,'punch'],[.62,'guard'],[.73,'runB'],[.81,'runA'],[.89,'runB'],[.97,'guard'],[1,'guard']];
  const pairs={uppercut:['crouch','uppercut'],'twin-palm':['chamber','twinPalm'],'low-kick':['crouch','lowKick'],'crane-kick':['jump','craneKick'],elbow:['chamber','elbow'],'hammer-fist':['smashReady','hammerFist'],'heal-palm':['guardHigh','healPalm'],'finger-strike':['chamber','fingerStrike'],thrust:['chamber','thrust'],swing:['throwReady','swing'],'staff-spin':['smashReady','slash'],slash:['chamber','slash'],smash:['smashReady','smash'],'double-slash':['smashReady','slash'],punch:['chamber','punch'],combo:['chamber','punch'],kick:['kickReady','kick'],sweep:['crouch','sweep'],'flying-kick':['jump','fly'],'flip-kick':['jump','kick'],'spin-kick':['kickReady','kick'],palm:['chamber','palm'],shoulder:['crouch','shoulder'],slam:['jump','slam'],disarm:['chamber','palm'],grab:['chamber','grab'],pickup:['guard','pickup'],throw:['throwReady','throw'],discard:['guard','pickup'],dodge:['guardHigh','dodge'],recoil:['guard','recoil']};
  const [prep,hit]=pairs[move]||pairs.punch;
- return sequence.map(([offset,name])=>{
+ const frames=sequence.map(([offset,name])=>{
    if(offset===.27||offset===.34||offset===.46)name=prep;
    if(offset===.40||offset===.53)name=offset===.53&&['combo','twin-palm'].includes(move)?'cross':offset===.53&&['double-slash','staff-spin'].includes(move)?'smash':hit;
    if(!['combo','twin-palm','double-slash','staff-spin','spin-kick'].includes(move)){if(offset===.46)name=hit;if(offset===.53)name='guard';}
@@ -76,6 +76,16 @@ export function rigFrames(move='punch'){
    if(variant&&offset>=.27&&offset<=.62){pose.body+=(variant%5-2)*3;pose.y-=Math.floor(variant/4)*2;pose.af+=variant*.65;pose.ab-=variant*1.2;pose.ef+=(variant%3-1)*5;}
    return{offset,pose};
  });
+ // Let the hips lead into a visible follow-through, then retract before the next strike.
+ const multi=['combo','twin-palm','double-slash','staff-spin','spin-kick'].includes(move),quiet=['throw','discard','pickup','dodge','recoil'].includes(move);
+ if(!quiet){
+  for(const at of (multi?[.40,.53]:[.40])){
+   const hit=frames.find(f=>f.offset===at).pose,follow={...hit,body:hit.body+(move==='flip-kick'?-18:4),af:hit.af+(/kick|sweep/.test(move)?-4:9),head:hit.head-2};
+   frames.push({offset:at+.018,pose:follow});
+  }
+  if(!multi){const recovery=frames.find(f=>f.offset===.46),hit=frames.find(f=>f.offset===.40).pose,guard=frames.find(f=>f.offset===.53).pose;recovery.pose=Object.fromEntries(Object.keys(GUARD).map(k=>[k,hit[k]*.38+guard[k]*.62]));}
+ }
+ return frames.sort((a,b)=>a.offset-b.offset);
 }
 export function jointTransform(key,pose){return key==='body'?`translate(0 ${pose.y}) rotate(${pose.body})`:`rotate(${pose[key]})`;}
 export function bindRig(node){return Object.fromEntries(Object.keys(GUARD).filter(k=>k!=='y').map(k=>[k,node?.querySelector(`[data-joint="${k}"]`)]));}
