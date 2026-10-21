@@ -36,3 +36,8 @@ test('A second hit does not reset the defender; damage and shield labels are spl
  const s=createCombatSequence(event({move:'combo',kind:'martial',hits:2,damage:31,absorbed:9}),layout());const a=sampleCombat(s,s.t.second-.01),b=sampleCombat(s,s.t.second+.01);assert.ok(Math.abs(a.targetPose.body-b.targetPose.body)<.01);const labels=sampleCombat(s,s.t.second+100).labels.map(l=>l.text);assert.ok(labels.includes('−16')&&labels.includes('−15'));assert.ok(labels.includes('格挡 5')&&labels.includes('格挡 4'));
 });
 test('An armed stunned fighter retains its weapon and no projectile is created',()=>{const e=event({kind:'stunned',move:undefined,weapon:undefined}),s=createCombatSequence(e,layout());for(const t of [0,400,800,1000]){const v=sampleCombat(s,t);assert.deepEqual(v.handVisible,[true,true]);assert.equal(v.projectile,null);assert.equal(v.position.x,0);}});
+
+test('A cue and frame at the same timestamp draw once while all simultaneous cues still fire',()=>{
+ const d=driver(),frames=[],cues=[];const clock=createMotionClock({duration:1000,driver:d,cues:[{time:400,kind:'impact'},{time:400,kind:'transfer'}],onFrame:time=>frames.push(time),onCue:cue=>cues.push(cue.kind)});
+ d.advance(400);assert.deepEqual(frames,[0,400]);assert.deepEqual(cues,['impact','transfer']);clock.pause();clock.setRate(3);assert.deepEqual(frames,[0,400]);clock.resume();d.advance(100);assert.deepEqual(frames,[0,400,700]);clock.cancel();
+});

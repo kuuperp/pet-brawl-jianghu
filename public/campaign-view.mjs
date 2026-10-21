@@ -1,7 +1,7 @@
-import {rewardPanel} from './progression-view.mjs?v=2.5.0';
-import {CHAPTERS,TOTAL_STAGES,STAGES_PER_CHAPTER,stageFor,weapon,PETS,SKILLS,ROUTES,stageChallenge} from './engine.mjs?v=2.5.0';
-import {BOSS_SKILLS} from './bosses.mjs?v=2.5.0';
-import {icon,petArt} from './art.mjs?v=2.5.0';
+import {rewardPanel} from './progression-view.mjs?v=2.5.1';
+import {CHAPTERS,TOTAL_STAGES,STAGES_PER_CHAPTER,stageFor,weapon,PETS,SKILLS,ROUTES,stageChallenge} from './engine.mjs?v=2.5.1';
+import {BOSS_SKILLS} from './bosses.mjs?v=2.5.1';
+import {icon,petArt} from './art.mjs?v=2.5.1';
 const ACTS=[['初入江湖','追回侠义帖，解开五派密契'],['五派风波','沿禁兵与军报追查真正的执印者'],['塞外遗城','寻钥、止炉，揭开古兵复苏之谜'],['天穹归元','破风雷、停天舟，把选择交还江湖']];
 export function journeyView(s,u,statsGrid){
  const target=stageFor(u.towerStage),chapter=target.chapter,c=CHAPTERS[chapter],first=chapter*STAGES_PER_CHAPTER+1,cleared=Math.min(TOTAL_STAGES,s.stage-1),arrived=first<=s.stage;

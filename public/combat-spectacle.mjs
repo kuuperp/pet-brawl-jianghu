@@ -1,5 +1,5 @@
-import {profileFor} from './combat-vfx.mjs?v=2.5.0';
-import {duelAnchor} from './duel-rig.mjs?v=2.5.0';
+import {profileFor} from './combat-vfx.mjs?v=2.5.1';
+import {duelAnchor} from './duel-rig.mjs?v=2.5.1';
 const PI=Math.PI,TAU=PI*2,cap=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t;
 const hash=s=>Array.from(String(s)).reduce((h,c)=>(Math.imul(h,31)+c.charCodeAt(0))>>>0,17);
 const smooth=t=>{t=cap(t);return t*t*(3-2*t);};
@@ -155,7 +155,8 @@ export function createCinematicLayer(scene){
  const ctx=canvas.getContext?.('2d');if(!ctx)return{render(){},destroy(){}};
  host.append(canvas);let oldWidth=0,oldHeight=0;
  return{render(state,frame){
-  const rect=scene.getBoundingClientRect?.()||{left:0,top:0},width=fullscreen?(globalThis.innerWidth||document.documentElement?.clientWidth||frame.width):frame.width,height=fullscreen?(globalThis.innerHeight||document.documentElement?.clientHeight||frame.height):frame.height,ratio=Math.min(1.5,globalThis.devicePixelRatio||1);
+  if(state.reduced||Math.max(state.darkness,state.flash,state.charge,state.strike)<.001&&!state.impacts.length){if(canvas.style.opacity!=='0'){ctx.clearRect(0,0,oldWidth,oldHeight);canvas.style.opacity='0';}return;}
+  const rect=frame.rect||scene.getBoundingClientRect?.()||{left:0,top:0},width=fullscreen?(globalThis.innerWidth||document.documentElement?.clientWidth||frame.width):frame.width,height=fullscreen?(globalThis.innerHeight||document.documentElement?.clientHeight||frame.height):frame.height,ratio=Math.min(1.5,globalThis.devicePixelRatio||1,Math.sqrt(2000000/(width*height)));
   if(oldWidth!==width||oldHeight!==height){oldWidth=width;oldHeight=height;canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);}
   const localActor=frame.project?frame.project(frame.anchors.actor):frame.actor,localTarget=frame.project?frame.project(frame.anchors.target):frame.target;
   const point=p=>({x:p.x+(fullscreen?(rect.left||0):0),y:p.y+(fullscreen?(rect.top||0):0)}),actor=point(localActor),target=point(localTarget);

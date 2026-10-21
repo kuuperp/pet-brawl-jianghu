@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mountScene3D,playCombatMotion,destroyScene3D} from '../public/battle3d.mjs';
+import {mountScene3D,playCombatMotion,destroyScene3D,parkScene3D} from '../public/battle3d.mjs';
 import {Battle,fighterFor,freshState} from '../public/engine.mjs';
 
 // Records the production renderer's DOM and GPU API writes, without browser QA claims.
@@ -42,5 +42,8 @@ test('3D labels mount hidden, update only on contact, retain their nodes and fre
   assert.equal(nodes.find(n=>n.textContent==='−16').style.opacity,'1');assert.equal(nodes.find(n=>n.textContent==='−15').style.opacity,'1');
   motion.setRate(3);driver.advance(1000);assert.equal(layer.children.length,0);assert.deepEqual(hits,[.5,1]);assert.ok(writes.some(w=>w[0]==='drawArrays'));
   assert.equal(body.children.length,0,'The viewport lighting layer is removed after the action');
+  const retainedCanvas=scene.children[0];parkScene3D();assert.equal(scene.children.length,0);
+  const nextScene=new Node();mountScene3D({querySelector:s=>s==='#scene'?nextScene:null},state,{display:e.after,selected:{mode:'tower',chapter:19}});
+  assert.equal(nextScene.children[0],retainedCanvas,'Changing pages reuses the canvas, shader programs and GPU geometry');
  }finally{motion?.();destroyScene3D();for(const [key,value]of Object.entries(original))globalThis[key]=value;}
 });
