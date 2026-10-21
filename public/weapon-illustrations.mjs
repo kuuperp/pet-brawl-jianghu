@@ -1,4 +1,4 @@
-import {NEW_WEAPONS} from './armory.mjs?v=2.5.1';
+import {NEW_WEAPONS} from './armory.mjs?v=2.6.0';
 export const EXTRA_WEAPON_ART={
  chain:'<path d="m23 85 13-27" stroke="#aa805a" stroke-width="9"/><path d="M35 59q-12-34 20-31" fill="none" stroke="#778982" stroke-width="4"/><circle cx="69" cy="30" r="18" fill="#c9a46b"/><path d="m60 14 6 17-9 11m18-27-6 16 10 12m-26-14h34" fill="none" stroke="#927651"/>',
  spear:'<path d="m23 89 41-57" stroke="#ae855d" stroke-width="7"/><path d="m56 34 20-25 1 33-13-7-6 7z" fill="#b9d0cf"/><path d="m62 38-15 9 8 12 8-21" fill="#cc7866"/><path d="m67 30 7-14" stroke="#eef6e1"/>',

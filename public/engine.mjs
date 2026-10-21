@@ -1,13 +1,13 @@
-import {RELIC,relicActive} from './relics.mjs?v=2.5.1';
-import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=2.5.1';
-import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=2.5.1';
-import {NEW_WEAPONS,NEW_SKILLS,NEW_ARTS,balanceWeapon} from './armory.mjs?v=2.5.1';
-import {ROUTES} from './chronicles.mjs?v=2.5.1';
-import {bossProfile,resolveBossTurn,phaseBoss,interruptBoss} from './bosses.mjs?v=2.5.1';
-import {extraDamageMultiplier,healingMultiplier,shieldMultiplier,weaponProc} from './combat-rules.mjs?v=2.5.1';
-import {MIN_WEAPON_USES,MAX_WEAPON_USES,randomWeaponLimit,weaponUseLimit,weaponExhausted} from './weapon-cycle.mjs?v=2.5.1';
-import {BALANCE_VERSION,levelGrowth,trainingBonus,experienceRate,baseExperienceFraction} from './progression.mjs?v=2.5.1';
-export {experienceRate,XP_RULES} from './progression.mjs?v=2.5.1';
+import {RELIC,relicActive} from './relics.mjs?v=2.6.0';
+import {EXTRA_WEAPONS,EXTRA_SKILLS,EXTRA_ARTS} from './expansion.mjs?v=2.6.0';
+import {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,campaignStage} from './campaign.mjs?v=2.6.0';
+import {NEW_WEAPONS,NEW_SKILLS,NEW_ARTS,balanceWeapon} from './armory.mjs?v=2.6.0';
+import {ROUTES} from './chronicles.mjs?v=2.6.0';
+import {bossProfile,resolveBossTurn,phaseBoss,interruptBoss} from './bosses.mjs?v=2.6.0';
+import {extraDamageMultiplier,healingMultiplier,shieldMultiplier,weaponProc} from './combat-rules.mjs?v=2.6.0';
+import {MIN_WEAPON_USES,MAX_WEAPON_USES,randomWeaponLimit,weaponUseLimit,weaponExhausted} from './weapon-cycle.mjs?v=2.6.0';
+import {BALANCE_VERSION,levelGrowth,trainingBonus,experienceRate,baseExperienceFraction} from './progression.mjs?v=2.6.0';
+export {experienceRate,XP_RULES} from './progression.mjs?v=2.6.0';
 export {CHAPTERS,STAGES_PER_CHAPTER,TOTAL_STAGES,MAX_LEVEL,ROUTES};
 export const VERSION=1;
 export const HEALTH_SCALE=3.2;
@@ -105,13 +105,27 @@ export function campaignFighterFor(s,opponent){
 export function chooseRoute(s,chapter,route){if(!Number.isInteger(chapter)||chapter<0||chapter>=CHAPTERS.length||chapter*40+1>s.stage||!Object.hasOwn(ROUTES,route))return{ok:false,message:'先抵达这一章，再决定行动方针'};s.chapterChoices[chapter]=route;return{ok:true};}
 export function trainingLimit(s){return Math.min(240,60+Math.floor((Math.max(1,s.stage)-1)/40)*10);}
 function enemyFor(name,pet,level,factor=1,boss=false,seed=1){const rng=seeded(seed),p=PETS[pet],l=levelGrowth(level);const available=WEAPONS.filter(w=>w.level<=level+1);const weapons=[...available].sort(()=>rng()-.5).slice(0,Math.min(available.length,2+Math.floor(level/3)+(boss?2:0))).map(w=>w.id);const skills=SKILLS.filter(k=>k.level<=level).slice(-2).map(k=>k.id);const f={name,pet,level,hp:Math.round((p.hp+l*13)*HEALTH_SCALE*factor*(boss?1.20:1)),atk:Math.round((p.atk+l*2.3)*factor),def:Math.round((p.def+l*.90)*factor),agi:Math.round((p.agi+l*.75)*factor),weapons,skills,stance:'balanced',boss};return{...f,power:power(f)};}
-export function rivalsFor(s,seed){return [.80,.98,1.15].map((factor,i)=>{const rng=seeded(seed+i*371);const index=Math.floor(rng()*RIVAL_NAMES.length),pet=Object.keys(PETS)[Math.floor(rng()*4)],level=Math.min(MAX_LEVEL,Math.max(1,s.level+(i===2?1:0))),reward={mode:'arena',difficulty:i};return{...enemyFor(RIVAL_NAMES[index],pet,level,factor,false,seed+i*11),key:`rival-${seed}-${i}`,...reward,gold:48+i*18+s.level*5,xp:Math.round(xpNeeded(level)*baseExperienceFraction(reward))};});}
+// Arena peers share the same investment budget, without copying relic bonuses.
+// Use the player's trained base as a floor; no result-dependent rubber banding.
+export function rivalsFor(s,seed){
+ const peer=statsFor({...s,stance:'balanced',relicEquipped:false});
+ return [1.015,1.04,1.07].map((factor,i)=>{
+  const rng=seeded(seed+i*371),index=Math.floor(rng()*RIVAL_NAMES.length),pet=Object.keys(PETS)[Math.floor(rng()*4)],level=s.level,reward={mode:'arena',difficulty:i};
+  const f=enemyFor(RIVAL_NAMES[index],pet,level,1,false,seed+i*11);
+  for(const key of ['hp','atk','def','agi'])f[key]=Math.round((peer[key]+(PETS[pet][key]-PETS[s.pet][key])*(key==='hp'?HEALTH_SCALE:1))*factor);
+  // Equivalent equipment and technique budgets close the old two-skill gap.
+  // Rotate the opening weapon so rivals still have distinct attack sequences.
+  f.weapons=[...s.equipped];if(f.weapons.length){const offset=Math.floor(rng()*f.weapons.length);f.weapons=[...f.weapons.slice(offset),...f.weapons.slice(0,offset)];}
+  f.skills=[...s.skills];f.power=power(f);
+  return{...f,key:`rival-${seed}-${i}`,matchSeed:seed,...reward,gold:48+i*18+s.level*5,xp:Math.round(xpNeeded(level)*baseExperienceFraction(reward))};
+ });
+}
 export function stageFor(n){
  const story=campaignStage(n),{stage,chapter,boss,chapterBoss}=story,level=Math.max(1,Math.ceil(stage/3));
  const factor=.88+chapter*.012+(boss?(chapterBoss?.34+chapter*.012:.20+chapter*.009):0);
  const enemy=enemyFor(story.name,story.pet,level,factor,boss,stage*193);
  const learned=SKILLS.filter(k=>k.level<=level).map(k=>k.id);
- enemy.skills=[...new Set(['wind',...(boss?['focus','iron']:[]),...learned.slice(-(boss?5:2)),...(story.trait?[story.trait]:[])])];
+ enemy.skills=[...new Set(['wind',...(boss?['focus','iron']:[]),...learned,...(story.trait?[story.trait]:[])])];
  if(chapterBoss&&chapter>=2)enemy.skills.push('ward');if(chapterBoss&&chapter>=4)enemy.skills.push('clearsky');
  enemy.skills=[...new Set(enemy.skills)];
  if(story.signature)enemy.weapons=[story.signature,...enemy.weapons.filter(id=>id!==story.signature)];enemy.weapons=enemy.weapons.slice(0,boss?8:5);

@@ -1,5 +1,5 @@
-import {battleRewards,XP_RULES,MAX_LEVEL,weapon} from './engine.mjs?v=2.5.1';
-import {icon} from './art.mjs?v=2.5.1';
+import {battleRewards,XP_RULES,MAX_LEVEL,weapon} from './engine.mjs?v=2.6.0';
+import {icon} from './art.mjs?v=2.6.0';
 export function rewardPanel(s,opponent){
  const r=battleRewards(s,opponent);
  if(r.practice)return`<div class="early-challenge-note"><strong>${icon('swords')}提前切磋 · 无奖励</strong><p>胜负均不获得经验、铜钱或物品，不计任务与胜负战绩，也不推进主线。正式推进到这一关后，仍可领取完整首通奖励。</p></div>`;

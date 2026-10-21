@@ -1,5 +1,5 @@
 // Small, dependency-free mesh renderer. Geometry, depth, normals and lighting are real 3D.
-import {craftGeometry} from './craft-geometry.mjs?v=2.5.1';
+import {craftGeometry} from './craft-geometry.mjs?v=2.6.0';
 export const identity=()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
 export function multiply(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++)for(let k=0;k<4;k++)o[c*4+r]+=a[k*4+r]*b[c*4+k];return o;}
 const unit=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);};

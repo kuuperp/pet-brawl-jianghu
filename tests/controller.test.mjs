@@ -37,8 +37,8 @@ test('Actual controller completes fights, blocks mid-fight edits, trains, claims
   click('claim','trains');assert.equal(current().gold,before+80);click('claim','trains',true);assert.equal(current().gold,before+80);
   click('nav','pet');click('pet','cat');assert.equal(current().pet,'cat');click('stance','fierce');assert.equal(current().stance,'fierce');
   click('nav','weapons');click('equip-weapon','brick');assert.deepEqual(current().equipped,['bamboo']);click('equip-weapon','bamboo');assert.deepEqual(current().equipped,['bamboo']);click('equip-weapon','brick');
-  click('nav','arena');for(let i=0;i<8;i++){click('start');click('skip');resolveResult();click('close');}assert.equal(current().battles,9);assert.ok(current().level>=2);assert.ok(current().owned.includes('pan'));
-  click('nav','tower');click('challenge-stage','1');click('skip');resolveResult();click('close');assert.equal(current().battles,10);
+  click('nav','arena');let played=0;while(current().level<2&&played<40){click('start');click('skip');resolveResult();click('close');played++;}assert.equal(current().battles,1+played);assert.ok(current().level>=2);assert.ok(current().owned.includes('pan'));
+  click('nav','tower');click('challenge-stage','1');click('skip');resolveResult();click('close');assert.equal(current().battles,2+played);
   click('settings');click('reset-confirm');click('reset');assert.equal(current().level,1);assert.equal(current().battles,0);
   const imported={...current(),name:'存档少侠',gold:987};nodes.get('import-file').files=[{size:600,text:async()=>JSON.stringify(imported)}];await nodes.get('import-file').change({target:nodes.get('import-file')});click('confirm-import');assert.equal(current().name,'存档少侠');assert.equal(current().gold,987);
   const full={...current(),level:20,owned:['bamboo','brick','pan','slipper','fish','fan','nunchaku','hammer','umbrella','pepper','guitar','spoon'],equipped:['bamboo']};nodes.get('import-file').files=[{size:800,text:async()=>JSON.stringify(full)}];await nodes.get('import-file').change({target:nodes.get('import-file')});click('confirm-import');click('nav','weapons');click('equip-all');assert.equal(current().equipped.length,12);

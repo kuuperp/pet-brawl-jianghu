@@ -1,5 +1,5 @@
-import {GUARD,POSES,rigFrames,canonicalMove} from './fighter-rig.mjs?v=2.5.1';
-import {createCombatLabels,sampleCombatLabels} from './combat-presentation.mjs?v=2.5.1';
+import {GUARD,POSES,rigFrames,canonicalMove} from './fighter-rig.mjs?v=2.6.0';
+import {createCombatLabels,sampleCombatLabels} from './combat-presentation.mjs?v=2.6.0';
 const cap=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
 const ease=t=>{t=cap(t);return t*t*(3-2*t);};
 const mix=(a,b,t)=>a+(b-a)*t;
